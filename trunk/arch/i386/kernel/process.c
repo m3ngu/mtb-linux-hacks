@@ -60,6 +60,19 @@ int hlt_counter;
 unsigned long boot_option_idle_override = 0;
 EXPORT_SYMBOL(boot_option_idle_override);
 
+asmlinkage int sys_helloworld(char *arg) {
+	char *ourcopy = NULL;
+	int string_length = strlen_user(arg);
+	ourcopy = kmalloc( (string_length + 1) * sizeof(char), GFP_KERNEL);
+	if (NULL == ourcopy) {
+		return -ENOMEM;
+	}
+	copy_from_user(ourcopy, arg, string_length + 1);
+	int ret = printk(KERN_ERR "%s", ourcopy);
+	kfree(ourcopy);
+	return 0;
+}
+
 /*
  * Return saved PC of a blocked thread.
  */

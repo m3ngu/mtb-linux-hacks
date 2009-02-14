@@ -294,8 +294,9 @@
 #define __NR_add_key		286
 #define __NR_request_key	287
 #define __NR_keyctl		288
+#define __NR_helloworld		289
 
-#define NR_syscalls 289
+#define NR_syscalls 290
 
 /*
  * user-visible error numbers are in the range -1 - -128: see
