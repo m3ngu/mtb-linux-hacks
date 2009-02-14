@@ -1,0 +1,7 @@
+kernel/fork.c
+kernel/sched.c
+arch/i386/kernel/entry.S
+arch/i386/kernel/process.c
+include/asm/unistd.h
+include/linux/sched.h
+include/linux/syscalls.h
