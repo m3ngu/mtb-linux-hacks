@@ -6,3 +6,4 @@ include/asm/unistd.h
 include/linux/sched.h
 include/linux/syscalls.h
 include/linux/init_task.h
+include/fail.h
