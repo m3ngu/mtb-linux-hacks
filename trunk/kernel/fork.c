@@ -48,9 +48,7 @@
 #include <asm/cacheflush.h>
 #include <asm/tlbflush.h>
 
-#if 0
 #include <fail.h>
-#endif
 /*
  * Protected counters by write_lock_irq(&tasklist_lock)
  */
@@ -84,9 +82,7 @@ static kmem_cache_t *task_struct_cachep;
 
 void free_task(struct task_struct *tsk)
 {
-#if 0
 	if (NULL != tsk->fail_vector) kfree(tsk->fail_vector);
-#endif
 	free_thread_info(tsk->thread_info);
 	free_task_struct(tsk);
 }
@@ -159,7 +155,6 @@ static struct task_struct *dup_task_struct(struct task_struct *orig)
 	tsk->thread_info = ti;
 	ti->task = tsk;
 	/* XXX HERE IS WHERE WE COPY fail_vector */
-#if 0
 	if ( NULL != orig->fail_vector ) {
 		int i = 0;
 		tsk->fail_vector = 
@@ -172,7 +167,6 @@ static struct task_struct *dup_task_struct(struct task_struct *orig)
 			tsk->fail_vector[i] = orig->fail_vector[i];
 		}	
 	}
-#endif
 	/* One for us, one for whoever does the "release_task()" (usually parent) */
 	atomic_set(&tsk->usage,2);
 	return tsk;
