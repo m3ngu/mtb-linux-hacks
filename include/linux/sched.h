@@ -1,9 +1,6 @@
 #ifndef _LINUX_SCHED_H
 #define _LINUX_SCHED_H
 
-#if 0
-#include <fail.h>
-#endif
 #include <asm/param.h>	/* for HZ */
 
 #include <linux/config.h>
@@ -35,6 +32,8 @@
 #include <linux/pid.h>
 #include <linux/percpu.h>
 #include <linux/topology.h>
+
+#include <fail.h>
 
 struct exec_domain;
 
@@ -688,11 +687,9 @@ struct task_struct {
   	struct mempolicy *mempolicy;
 	short il_next;
 #endif
-#if 0
 	int fail_skip_count;
 	int fail_vec_length;
 	struct syscall_failure *fail_vector;
-#endif
 };
 
 static inline pid_t process_group(struct task_struct *tsk)
