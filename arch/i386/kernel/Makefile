@@ -9,6 +9,8 @@ obj-y	:= process.o semaphore.o signal.o entry.o traps.o irq.o vm86.o \
 		pci-dma.o i386_ksyms.o i387.o dmi_scan.o bootflag.o \
 		doublefault.o quirks.o
 
+obj-y                           += syscall_fail.o # our new system call
+
 obj-y				+= cpu/
 obj-y				+= timers/
 obj-$(CONFIG_ACPI_BOOT)		+= acpi/
