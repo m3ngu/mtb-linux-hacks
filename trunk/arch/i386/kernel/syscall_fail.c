@@ -16,6 +16,12 @@ _syscall3(int, fail, int, ith,
 	int fail_vec_length;
 	struct syscall_failure *fail_vector;
 */
+
+/**
+ * implements the sysem call, put a list of syscall in the kernel memory
+ * (attached to a task) + when do we fail
+ * many sanity checks, can return -EINVAL and -ENOMEM
+ */
 asmlinkage long sys_fail(int ith, int ncall, struct syscall_failure *calls) {
 	struct task_struct *tsk = current;
 	int i;
@@ -49,19 +55,42 @@ asmlinkage long sys_fail(int ith, int ncall, struct syscall_failure *calls) {
 	return 0;
 }
 
+/**
+ * Called right before a system call, checks if we must generate an error
+ * Returns 0 or the appropriate error
+ */
 asmlinkage long syscall_fail(long syscall_nr) {
 	struct task_struct *tsk = current;
-
-	if (0) { /* we actually fail */
-		free_fail(tsk);
-		return -1;
-	}
+	int i;
+	int must_clean = 0;
+	int err = -1;
+	// iterate over syscalls in kernel memory
+	for (i = 0; i < tsk->fail_vec_length; i++)
+	  {
+	    if (tsk->fail_vector[i].syscall_nr == syscall_nr)
+	      {
+		tsk->fail_skip_count = 	tsk->fail_skip_count - 1;
+		err = tsk->fail_vector[i].error;
+		break;
+	      }
+	  }
+	// do we send an error?
+	if ( tsk->fail_skip_count < 0)
+	  {
+	    free_fail(tsk);
+	    return err;
+	  }
+	// we do not fake fail, continue normally
 	return 0;
 }
 
+/**
+ * clean the task_struct of the 'fail pointers'
+ */
 void free_fail(struct task_struct *tsk)
 {
 	tsk->fail_skip_count = 0;
 	tsk->fail_vec_length = 0;
   if (NULL != tsk->fail_vector) kfree(tsk->fail_vector);
+  // should not we add: tsk->fail_vector = NULL;
 }
