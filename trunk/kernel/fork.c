@@ -82,7 +82,8 @@ static kmem_cache_t *task_struct_cachep;
 
 void free_task(struct task_struct *tsk)
 {
-	if (NULL != tsk->fail_vector) kfree(tsk->fail_vector);
+        //if (NULL != tsk->fail_vector) kfree(tsk->fail_vector);
+        free_fail(tsk);
 	free_thread_info(tsk->thread_info);
 	free_task_struct(tsk);
 }
