@@ -62,6 +62,7 @@ struct mq_attr;
 #include <asm/signal.h>
 #include <linux/quota.h>
 #include <linux/key.h>
+#include <fail.h>
 
 asmlinkage long sys_time(time_t __user *tloc);
 asmlinkage long sys_stime(time_t __user *tptr);

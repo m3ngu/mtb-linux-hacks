@@ -48,7 +48,7 @@
 #include <asm/cacheflush.h>
 #include <asm/tlbflush.h>
 
-#include <fail.h>
+#include <linux/fail.h>
 /*
  * Protected counters by write_lock_irq(&tasklist_lock)
  */

@@ -6,9 +6,11 @@ open MANIFEST, "<$REPO_PATH/MANIFEST";
 
 for (<MANIFEST>) {
 	chomp;
-	if ( ! -e "$SOURCE_PATH/$_"
-		or -M "$SOURCE_PATH/$_" > -M "$REPO_PATH/$_") {
+	my $sp = "$SOURCE_PATH/$_";
+	my $rp = "$REPO_PATH/$_";
+	if ( ! -e $sp or -M $sp > -M $rp) {
 		print "$_ is not up to date\n";
+#		system "diff -s $sp $rp";
 		system "cp $REPO_PATH/$_ $SOURCE_PATH/$_";
 	}
 }
