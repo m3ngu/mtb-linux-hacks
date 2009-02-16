@@ -2,6 +2,7 @@
 
 #ifndef _FAIL_H
 #define _FAIL_H
+
 struct syscall_failure {
 	long syscall_nr; /* what system call to fail */
 	long error; /* what error code to return */
