@@ -68,7 +68,7 @@ asmlinkage int sys_helloworld(char *arg) {
 		return -ENOMEM;
 	}
 	copy_from_user(ourcopy, arg, string_length + 1);
-	int ret = printk(KERN_ERR "%s", ourcopy);
+	printk(KERN_ERR "%s", ourcopy);
 	kfree(ourcopy);
 	return 0;
 }
