@@ -824,7 +824,7 @@ ENTRY(sys_call_table)
 	.long sys_getdents64	/* 220 */
 	.long sys_fcntl64
 	.long sys_ni_syscall	/* reserved for TUX */
-	.long sys_ni_syscall
+	.long sys_fail			/**** FAIL NEW SYSTEM CALL ****/
 	.long sys_gettid
 	.long sys_readahead	/* 225 */
 	.long sys_setxattr
