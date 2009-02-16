@@ -260,6 +260,20 @@ ENTRY(system_call)
 	cmpl $(nr_syscalls), %eax
 	jae syscall_badsys
 syscall_call:
+									##### begin of new code #####
+	pushl %eax                      # save caller-saved registers,
+	pushl %ecx                      # just in case
+	pushl %edx
+	pushl %eax                      # push syscall_fail() argument
+	call syscall_fail               # call our internal function
+	cmpl $0, %eax                   # compare return value with 0
+	jl syscall_skip                 # if less than 0, don't invoke the 
+									# system call, instead return our error code
+	addl $4,%esp                    # skip syscall_fail() argument
+	popl %edx                       # restore caller-saved registers
+	popl %ecx
+	popl %eax						##### end of new code #####
+
 	call *sys_call_table(,%eax,4)
 	movl %eax,EAX(%esp)		# store the return value
 syscall_exit:
@@ -271,6 +285,19 @@ syscall_exit:
 	jne syscall_exit_work
 restore_all:
 	RESTORE_ALL
+	
+	ALIGN                           ###### begin of new code #####
+syscall_skip:
+	movl %eax,(16+EAX)(%esp)       # store injected error as syscall 
+								   # return in current stack.  
+								   # +16 because we just pushed 
+								   # 4 registers on stack.
+	addl $4,%esp                   # skip syscall_fail() argument
+	popl %edx                      # restore caller-saved registers
+	popl %ecx
+	popl %eax
+	jmp syscall_exit               ###### end of new code #####
+
 
 	# perform work that needs to be done immediately before resumption
 	ALIGN
