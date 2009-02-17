@@ -5,6 +5,9 @@
 #include <linux/unistd.h>
 #include <linux/sched.h>
 #include <linux/errno.h>
+#include <asm-i386/uaccess.h>
+/* XXX undeclared: copy_from_user.  Where the heck is it? */
+
 /*
 _syscall3(int, fail, int, ith,
 	 int, ncall, 
@@ -25,7 +28,7 @@ _syscall3(int, fail, int, ith,
 asmlinkage long sys_fail(int ith, int ncall, struct syscall_failure *calls) {
 	struct task_struct *tsk = current;
 	int i;
-	int invalid_arg = 0;
+	int internal_error = 0;
 	if ( 0 > ith || 1 > ncall || NULL == calls) 	return -EINVAL;	
 	if ( NULL != tsk->fail_vector) 	return -EINVAL;
 	tsk->fail_vector = kmalloc(
@@ -35,20 +38,25 @@ asmlinkage long sys_fail(int ith, int ncall, struct syscall_failure *calls) {
 	if ( NULL == tsk->fail_vector ) return -ENOMEM;
 	/* printk(KERN_ERR "Syscall 'fail' arrived at end of current code\n"); */
 	for ( i = 0; i < ncall; i++ ) {
-		if ( 0 > syscall_failure[i].syscall_nr  
-			|| NR_syscalls <= syscall_failure[i].syscall_nr 
-			|| 0 > syscall_failure[i].error ) { 
+		int copy_ret = copy_from_user(
+			tsk->fail_vector + i, calls + i, sizeof(struct syscall_failure)
+		);
+		if (copy_ret) {
+			/* copy failed: return EFAULT */
+			internal_error = EFAULT;
+			break;
+		}
+		if ( 0 > tsk->fail_vector[i].syscall_nr  
+			|| NR_syscalls <= tsk->fail_vector[i].syscall_nr 
+			|| 0 > tsk->fail_vector[i].error ) { 
 				/* problem: free memory, and return EINVAL */ 
-				invalid_arg = 1;
+				internal_error = EINVAL;
 				break;
 		}
-		copy_from_user(tsk->fail_vector + i, calls + i, 
-			sizeof(struct syscall_failure)
-		);
 	}
-	if (invalid_arg) {
+	if (internal_error) {
 		free_fail(tsk);
-		return -EINVAL;
+		return -internal_error;
 	}
 	tsk->fail_skip_count = ith;
 	tsk->fail_vec_length = ncall;
@@ -62,7 +70,6 @@ asmlinkage long sys_fail(int ith, int ncall, struct syscall_failure *calls) {
 asmlinkage long syscall_fail(long syscall_nr) {
 	struct task_struct *tsk = current;
 	int i;
-	int must_clean = 0;
 	int err = -1;
 	// iterate over syscalls in kernel memory
 	for (i = 0; i < tsk->fail_vec_length; i++)
@@ -91,6 +98,8 @@ void free_fail(struct task_struct *tsk)
 {
 	tsk->fail_skip_count = 0;
 	tsk->fail_vec_length = 0;
-  if (NULL != tsk->fail_vector) kfree(tsk->fail_vector);
-  // should not we add: tsk->fail_vector = NULL;
+	if (NULL != tsk->fail_vector) {
+		kfree(tsk->fail_vector);
+		tsk->fail_vector = NULL;
+	}
 }
