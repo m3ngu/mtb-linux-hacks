@@ -14,9 +14,15 @@ int main() {
 	struct syscall_failure s;
 	int res = 0;
 	s.syscall_nr = 3;
-	s.error = 42;
+	s.error = 42; 
+	res = fail(1,1, (struct syscall_failure *) 1024);
+	if (res) perror("Error result from call 1");
+	else puts("Unexpected success on call 1");
+	res = fail(1,1,&s); 
+	if (res) perror("Unexpected failure from call 2");
+	else puts("Success on call 2");
 	res = fail(1,1,&s);
-	printf("Got result %d\n", res);
-	res = fail(1,1,&s);
-	printf("Second, got result %d\n", res);
+	if (res) perror("Error result from call 3");
+	else puts("Unexpected success on call 3");
+
 }
