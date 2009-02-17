@@ -76,16 +76,20 @@ asmlinkage long syscall_fail(long syscall_nr) {
 	  {
 	    if (tsk->fail_vector[i].syscall_nr == syscall_nr)
 	      {
+		/* printk(KERN_ERR "Found syscall in intercept list..."); */
 		tsk->fail_skip_count = 	tsk->fail_skip_count - 1;
 		err = tsk->fail_vector[i].error;
+		/* printk(KERN_ERR "error found is %d, skip count now %d\n", 
+			err, tsk->fail_skip_count); */
 		break;
 	      }
 	  }
 	// do we send an error?
 	if ( tsk->fail_skip_count < 0)
 	  {
+		/* printk(KERN_ERR "Cleaning up and returning %d\n", err); */
 	    free_fail(tsk);
-	    return err;
+	    return -err;
 	  }
 	// we do not fake fail, continue normally
 	return 0;
