@@ -27,37 +27,38 @@ _syscall3(int, fail, int, ith,
  */
 asmlinkage long sys_fail(int ith, int ncall, struct syscall_failure *calls) {
 	struct task_struct *tsk = current;
-	int i;
+	int i, copy_ret;
 	int internal_error = 0;
 	if ( 0 > ith || 1 > ncall || NULL == calls) 	return -EINVAL;	
 	if ( NULL != tsk->fail_vector) 	return -EINVAL;
+
 	tsk->fail_vector = kmalloc(
 		ncall * sizeof(struct syscall_failure),
 		GFP_KERNEL
 	);
 	if ( NULL == tsk->fail_vector ) return -ENOMEM;
-	/* printk(KERN_ERR "Syscall 'fail' arrived at end of current code\n"); */
-	for ( i = 0; i < ncall; i++ ) {
-		int copy_ret = copy_from_user(
-			tsk->fail_vector + i, calls + i, sizeof(struct syscall_failure)
-		);
-		if (copy_ret) {
-			/* copy failed: return EFAULT */
-			internal_error = EFAULT;
-			break;
-		}
+	
+	copy_ret = copy_from_user(
+		tsk->fail_vector, calls, ncall * sizeof(struct syscall_failure)
+	);
+	if (copy_ret) { /* copy failed: return EFAULT */
+		internal_error = EFAULT;
+	}
+
+	for ( i = 0; !internal_error && i < ncall; i++ ) {
 		if ( 0 > tsk->fail_vector[i].syscall_nr  
 			|| NR_syscalls <= tsk->fail_vector[i].syscall_nr 
 			|| 0 > tsk->fail_vector[i].error ) { 
 				/* problem: free memory, and return EINVAL */ 
 				internal_error = EINVAL;
-				break;
 		}
 	}
+	
 	if (internal_error) {
 		free_fail(tsk);
 		return -internal_error;
 	}
+	
 	tsk->fail_skip_count = ith;
 	tsk->fail_vec_length = ncall;
 	return 0;
@@ -65,7 +66,7 @@ asmlinkage long sys_fail(int ith, int ncall, struct syscall_failure *calls) {
 
 /**
  * Called right before a system call, checks if we must generate an error
- * Returns 0 or the appropriate error
+ * Returns 0 or the appropriate error (negated)
  */
 asmlinkage long syscall_fail(long syscall_nr) {
 	struct task_struct *tsk = current;
