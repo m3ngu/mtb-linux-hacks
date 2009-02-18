@@ -40,7 +40,7 @@ int main() {
 	
 	res = fail(0,1, (struct syscall_failure *) 1024);
 	
-	printf("[1d] Invalid *calls (bad pointer => fail() returned %i\n", res);
+	printf("[1d] Invalid *calls (bad pointer) => fail() returned %i\n", res);
 	if (res) perror("[1d]");
 	
 	puts("------------------------------------");
@@ -95,7 +95,7 @@ int main() {
 	puts("[3b] Calling fail() with ith = 3");
 	
 	res = fail(3,1,&s);
-	if (res) perror("[3a]");
+	if (res) perror("[3b]");
 	
 	for (i = 0; i < 6; i++) {
 		pid = getpid();
