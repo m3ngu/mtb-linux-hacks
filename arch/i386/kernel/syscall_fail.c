@@ -5,7 +5,7 @@
 #include <linux/unistd.h>
 #include <linux/sched.h>
 #include <linux/errno.h>
-#include <asm-i386/uaccess.h>
+#include <asm/uaccess.h>
 /* XXX undeclared: copy_from_user.  Where the heck is it? */
 
 /*
@@ -21,7 +21,7 @@ _syscall3(int, fail, int, ith,
 */
 
 /**
- * implements the sysem call, put a list of syscall in the kernel memory
+ * implements the system call, put a list of syscalls in the kernel memory
  * (attached to a task) + when do we fail
  * many sanity checks, can return -EINVAL and -ENOMEM
  */
