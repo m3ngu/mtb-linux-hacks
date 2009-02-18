@@ -1,7 +1,7 @@
 /* test_fail.c: test the new system call */
 
-#include "/usr/src/linux-2.6.11.12-hwk2/include/fail.h"
-#include "/usr/src/linux-2.6.11.12-hwk2/include/asm/unistd.h"
+#include "fail.h"
+#include "asm/unistd.h"
 #include <stdio.h>
 #include <errno.h>
 #include <sys/types.h>
