@@ -4,7 +4,7 @@ arch/i386/kernel/entry.S
 arch/i386/kernel/process.c
 arch/i386/kernel/syscall_fail.c
 arch/i386/kernel/Makefile
-include/asm/unistd.h
+include/asm-i386/unistd.h
 include/linux/sched.h
 include/linux/syscalls.h
 include/linux/init_task.h
