@@ -1,0 +1,365 @@
+diff -Naur linux-2.6.11.12-ref/arch/i386/kernel/entry.S linux-2.6.11.12-hwk2/arch/i386/kernel/entry.S
+--- linux-2.6.11.12-ref/arch/i386/kernel/entry.S	2009-02-18 12:40:38.000000000 -0500
++++ linux-2.6.11.12-hwk2/arch/i386/kernel/entry.S	2009-02-18 12:50:23.000000000 -0500
+@@ -260,6 +260,20 @@
+ 	cmpl $(nr_syscalls), %eax
+ 	jae syscall_badsys
+ syscall_call:
++									##### begin of new code #####
++	pushl %eax                      # save caller-saved registers,
++	pushl %ecx                      # just in case
++	pushl %edx
++	pushl %eax                      # push syscall_fail() argument
++	call syscall_fail               # call our internal function
++	cmpl $0, %eax                   # compare return value with 0
++	jl syscall_skip                 # if less than 0, don't invoke the 
++									# system call, instead return our error code
++	addl $4,%esp                    # skip syscall_fail() argument
++	popl %edx                       # restore caller-saved registers
++	popl %ecx
++	popl %eax						##### end of new code #####
++
+ 	call *sys_call_table(,%eax,4)
+ 	movl %eax,EAX(%esp)		# store the return value
+ syscall_exit:
+@@ -271,6 +285,19 @@
+ 	jne syscall_exit_work
+ restore_all:
+ 	RESTORE_ALL
++	
++	ALIGN                           ###### begin of new code #####
++syscall_skip:
++	movl %eax,(16+EAX)(%esp)       # store injected error as syscall 
++								   # return in current stack.  
++								   # +16 because we just pushed 
++								   # 4 registers on stack.
++	addl $4,%esp                   # skip syscall_fail() argument
++	popl %edx                      # restore caller-saved registers
++	popl %ecx
++	popl %eax
++	jmp syscall_exit               ###### end of new code #####
++
+ 
+ 	# perform work that needs to be done immediately before resumption
+ 	ALIGN
+@@ -824,7 +851,7 @@
+ 	.long sys_getdents64	/* 220 */
+ 	.long sys_fcntl64
+ 	.long sys_ni_syscall	/* reserved for TUX */
+-	.long sys_ni_syscall
++	.long sys_fail			/**** FAIL NEW SYSTEM CALL ****/
+ 	.long sys_gettid
+ 	.long sys_readahead	/* 225 */
+ 	.long sys_setxattr
+@@ -890,5 +917,6 @@
+ 	.long sys_add_key
+ 	.long sys_request_key
+ 	.long sys_keyctl
++/*	.long sys_helloworld */ /* used for debugging */
+ 
+ syscall_table_size=(.-sys_call_table)
+diff -Naur linux-2.6.11.12-ref/arch/i386/kernel/Makefile linux-2.6.11.12-hwk2/arch/i386/kernel/Makefile
+--- linux-2.6.11.12-ref/arch/i386/kernel/Makefile	2005-06-11 22:45:37.000000000 -0400
++++ linux-2.6.11.12-hwk2/arch/i386/kernel/Makefile	2009-02-18 12:43:26.000000000 -0500
+@@ -9,6 +9,8 @@
+ 		pci-dma.o i386_ksyms.o i387.o dmi_scan.o bootflag.o \
+ 		doublefault.o quirks.o
+ 
++obj-y                           += syscall_fail.o # our new system call
++
+ obj-y				+= cpu/
+ obj-y				+= timers/
+ obj-$(CONFIG_ACPI_BOOT)		+= acpi/
+diff -Naur linux-2.6.11.12-ref/arch/i386/kernel/process.c linux-2.6.11.12-hwk2/arch/i386/kernel/process.c
+--- linux-2.6.11.12-ref/arch/i386/kernel/process.c	2009-02-18 12:40:24.000000000 -0500
++++ linux-2.6.11.12-hwk2/arch/i386/kernel/process.c	2009-02-18 12:50:24.000000000 -0500
+@@ -60,6 +60,21 @@
+ unsigned long boot_option_idle_override = 0;
+ EXPORT_SYMBOL(boot_option_idle_override);
+ 
++/* hello world syscall, used for debugging
++asmlinkage int sys_helloworld(char *arg) {
++	char *ourcopy = NULL;
++	int string_length = strlen_user(arg);
++	ourcopy = kmalloc( (string_length + 1) * sizeof(char), GFP_KERNEL);
++	if (NULL == ourcopy) {
++		return -ENOMEM;
++	}
++	copy_from_user(ourcopy, arg, string_length + 1);
++	printk(KERN_ERR "%s", ourcopy);
++	kfree(ourcopy);
++	return 0;
++}
++*/
++
+ /*
+  * Return saved PC of a blocked thread.
+  */
+diff -Naur linux-2.6.11.12-ref/arch/i386/kernel/syscall_fail.c linux-2.6.11.12-hwk2/arch/i386/kernel/syscall_fail.c
+--- linux-2.6.11.12-ref/arch/i386/kernel/syscall_fail.c	1969-12-31 19:00:00.000000000 -0500
++++ linux-2.6.11.12-hwk2/arch/i386/kernel/syscall_fail.c	2009-02-18 12:50:24.000000000 -0500
+@@ -0,0 +1,116 @@
++/* fail.c: implementation of fail syscall */
++
++
++#include <linux/fail.h>
++#include <linux/unistd.h>
++#include <linux/sched.h>
++#include <linux/errno.h>
++#include <asm/uaccess.h>
++/* XXX undeclared: copy_from_user.  Where the heck is it? */
++
++/*
++_syscall3(int, fail, int, ith,
++	 int, ncall, 
++	 struct syscall_failure *, 
++	 calls);
++	 */
++/*
++	int fail_skip_count;
++	int fail_vec_length;
++	struct syscall_failure *fail_vector;
++*/
++
++/**
++ * implements the system call, put a list of syscalls in the kernel memory
++ * (attached to a task) + when do we fail
++ * many sanity checks, can return -EINVAL and -ENOMEM
++ */
++asmlinkage long sys_fail(int ith, int ncall, struct syscall_failure *calls) {
++	struct task_struct *tsk = current;
++	int i, j, copy_ret;
++	int internal_error = 0;
++	if ( 0 > ith || 1 > ncall || NULL == calls) 	return -EINVAL;	
++	if ( NULL != tsk->fail_vector) 	return -EINVAL;
++
++	tsk->fail_vector = kmalloc(
++		ncall * sizeof(struct syscall_failure),
++		GFP_KERNEL
++	);
++	if ( NULL == tsk->fail_vector ) return -ENOMEM;
++	
++	copy_ret = copy_from_user(
++		tsk->fail_vector, calls, ncall * sizeof(struct syscall_failure)
++	);
++	if (copy_ret) { /* copy failed: return EFAULT */
++		internal_error = EFAULT;
++	}
++
++	for ( i = 0; !internal_error && i < ncall; i++ ) {
++		if ( 0 > tsk->fail_vector[i].syscall_nr  
++			|| NR_syscalls <= tsk->fail_vector[i].syscall_nr 
++			|| 0 > tsk->fail_vector[i].error ) { 
++				/* problem: free memory, and return EINVAL */ 
++				internal_error = EINVAL;
++		}
++		// checks if we insert twice the same system call
++	  for (j = 0; !internal_error && j < i; j++) {
++	    if (tsk->fail_vector[j].syscall_nr == tsk->fail_vector[i].syscall_nr)
++		internal_error = EINVAL;
++	  }
++
++	}
++	
++	if (internal_error) {
++		free_fail(tsk);
++		return -internal_error;
++	}
++	
++	tsk->fail_skip_count = ith;
++	tsk->fail_vec_length = ncall;
++	return 0;
++}
++
++/**
++ * Called right before a system call, checks if we must generate an error
++ * Returns 0 or the appropriate error (negated)
++ */
++asmlinkage long syscall_fail(long syscall_nr) {
++	struct task_struct *tsk = current;
++	int i;
++	int err = -1;
++	// iterate over syscalls in kernel memory
++	for (i = 0; i < tsk->fail_vec_length; i++)
++	  {
++	    if (tsk->fail_vector[i].syscall_nr == syscall_nr)
++	      {
++		/* printk(KERN_ERR "Found syscall in intercept list..."); */
++		tsk->fail_skip_count = 	tsk->fail_skip_count - 1;
++		err = tsk->fail_vector[i].error;
++		/* printk(KERN_ERR "error found is %d, skip count now %d\n", 
++			err, tsk->fail_skip_count); */
++		break;
++	      }
++	  }
++	// do we send an error?
++	if ( tsk->fail_skip_count < 0)
++	  {
++		/* printk(KERN_ERR "Cleaning up and returning %d\n", err); */
++	    free_fail(tsk);
++	    return -err;
++	  }
++	// we do not fake fail, continue normally
++	return 0;
++}
++
++/**
++ * clean the task_struct of the 'fail pointers'
++ */
++void free_fail(struct task_struct *tsk)
++{
++	tsk->fail_skip_count = 0;
++	tsk->fail_vec_length = 0;
++	if (NULL != tsk->fail_vector) {
++		kfree(tsk->fail_vector);
++		tsk->fail_vector = NULL;
++	}
++}
+diff -Naur linux-2.6.11.12-ref/include/asm-i386/unistd.h linux-2.6.11.12-hwk2/include/asm-i386/unistd.h
+--- linux-2.6.11.12-ref/include/asm-i386/unistd.h	2005-06-11 22:45:37.000000000 -0400
++++ linux-2.6.11.12-hwk2/include/asm-i386/unistd.h	2009-02-18 12:50:24.000000000 -0500
+@@ -229,6 +229,7 @@
+ #define __NR_getdents64		220
+ #define __NR_fcntl64		221
+ /* 223 is unused */
++#define __NR_fail		223
+ #define __NR_gettid		224
+ #define __NR_readahead		225
+ #define __NR_setxattr		226
+@@ -294,6 +295,7 @@
+ #define __NR_add_key		286
+ #define __NR_request_key	287
+ #define __NR_keyctl		288
++//#define __NR_helloworld		289 // used to debug
+ 
+ #define NR_syscalls 289
+ 
+diff -Naur linux-2.6.11.12-ref/include/fail.h linux-2.6.11.12-hwk2/include/fail.h
+--- linux-2.6.11.12-ref/include/fail.h	1969-12-31 19:00:00.000000000 -0500
++++ linux-2.6.11.12-hwk2/include/fail.h	2009-02-18 12:43:26.000000000 -0500
+@@ -0,0 +1,13 @@
++/* fail.h: user-accessible interface to the system-call failure injector */
++
++#ifndef _FAIL_H
++#define _FAIL_H
++
++struct syscall_failure {
++	long syscall_nr; /* what system call to fail */
++	long error; /* what error code to return */
++};
++
++int fail(int ith, int ncall, struct syscall_failure *calls);
++#endif
++
+diff -Naur linux-2.6.11.12-ref/include/linux/fail.h linux-2.6.11.12-hwk2/include/linux/fail.h
+--- linux-2.6.11.12-ref/include/linux/fail.h	1969-12-31 19:00:00.000000000 -0500
++++ linux-2.6.11.12-hwk2/include/linux/fail.h	2009-02-18 12:43:26.000000000 -0500
+@@ -0,0 +1,13 @@
++/* linux/fail.h: back-end function declarations for syscall_fail.h */
++
++#ifndef _LINUX_FAIL_H
++#define _LINUX_FAIL_H
++#include <linux/linkage.h>
++#include <linux/sched.h>
++#include <fail.h>
++
++asmlinkage long syscall_fail(long syscall_nr);
++
++void free_fail(struct task_struct *tsk);
++
++#endif
+diff -Naur linux-2.6.11.12-ref/include/linux/init_task.h linux-2.6.11.12-hwk2/include/linux/init_task.h
+--- linux-2.6.11.12-ref/include/linux/init_task.h	2005-06-11 22:45:37.000000000 -0400
++++ linux-2.6.11.12-hwk2/include/linux/init_task.h	2009-02-18 12:43:26.000000000 -0500
+@@ -112,6 +112,9 @@
+ 	.proc_lock	= SPIN_LOCK_UNLOCKED,				\
+ 	.switch_lock	= SPIN_LOCK_UNLOCKED,				\
+ 	.journal_info	= NULL,						\
++	.fail_skip_count = 0, 						\
++	.fail_vec_length = 0,						\
++	.fail_vector = NULL,						\
+ }
+ 
+ 
+diff -Naur linux-2.6.11.12-ref/include/linux/sched.h linux-2.6.11.12-hwk2/include/linux/sched.h
+--- linux-2.6.11.12-ref/include/linux/sched.h	2005-06-11 22:45:37.000000000 -0400
++++ linux-2.6.11.12-hwk2/include/linux/sched.h	2009-02-18 12:43:26.000000000 -0500
+@@ -33,6 +33,8 @@
+ #include <linux/percpu.h>
+ #include <linux/topology.h>
+ 
++#include <fail.h>
++
+ struct exec_domain;
+ 
+ /*
+@@ -685,6 +687,9 @@
+   	struct mempolicy *mempolicy;
+ 	short il_next;
+ #endif
++	int fail_skip_count;
++	int fail_vec_length;
++	struct syscall_failure *fail_vector;
+ };
+ 
+ static inline pid_t process_group(struct task_struct *tsk)
+diff -Naur linux-2.6.11.12-ref/include/linux/syscalls.h linux-2.6.11.12-hwk2/include/linux/syscalls.h
+--- linux-2.6.11.12-ref/include/linux/syscalls.h	2005-06-11 22:45:37.000000000 -0400
++++ linux-2.6.11.12-hwk2/include/linux/syscalls.h	2009-02-18 12:50:24.000000000 -0500
+@@ -62,6 +62,7 @@
+ #include <asm/signal.h>
+ #include <linux/quota.h>
+ #include <linux/key.h>
++#include <fail.h>
+ 
+ asmlinkage long sys_time(time_t __user *tloc);
+ asmlinkage long sys_stime(time_t __user *tptr);
+@@ -505,5 +506,6 @@
+ 
+ asmlinkage long sys_keyctl(int cmd, unsigned long arg2, unsigned long arg3,
+ 			   unsigned long arg4, unsigned long arg5);
+-
++//asmlinkage long sys_helloworld(char *arg);// used to debug
++asmlinkage long sys_fail(int ith, int ncall, struct syscall_failure *calls);
+ #endif
+diff -Naur linux-2.6.11.12-ref/kernel/fork.c linux-2.6.11.12-hwk2/kernel/fork.c
+--- linux-2.6.11.12-ref/kernel/fork.c	2005-06-11 22:45:37.000000000 -0400
++++ linux-2.6.11.12-hwk2/kernel/fork.c	2009-02-18 12:43:26.000000000 -0500
+@@ -48,6 +48,7 @@
+ #include <asm/cacheflush.h>
+ #include <asm/tlbflush.h>
+ 
++#include <linux/fail.h>
+ /*
+  * Protected counters by write_lock_irq(&tasklist_lock)
+  */
+@@ -81,6 +82,8 @@
+ 
+ void free_task(struct task_struct *tsk)
+ {
++        //if (NULL != tsk->fail_vector) kfree(tsk->fail_vector);
++        free_fail(tsk);
+ 	free_thread_info(tsk->thread_info);
+ 	free_task_struct(tsk);
+ }
+@@ -152,7 +155,19 @@
+ 	*tsk = *orig;
+ 	tsk->thread_info = ti;
+ 	ti->task = tsk;
+-
++	/* XXX HERE IS WHERE WE COPY fail_vector */
++	if ( NULL != orig->fail_vector ) {
++		int i = 0;
++		tsk->fail_vector = 
++			kmalloc(orig->fail_vec_length * sizeof(struct syscall_failure), GFP_KERNEL);
++		if (NULL == tsk->fail_vector) {
++			free_task(tsk);
++			return NULL;
++		}
++		for (i = 0; i < tsk->fail_vec_length; i++) {
++			tsk->fail_vector[i] = orig->fail_vector[i];
++		}	
++	}
+ 	/* One for us, one for whoever does the "release_task()" (usually parent) */
+ 	atomic_set(&tsk->usage,2);
+ 	return tsk;
