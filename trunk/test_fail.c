@@ -10,6 +10,7 @@ _syscall3(int, fail, int, ith,
 	 int, ncall, 
 	 struct syscall_failure *, 
 	 calls);
+_syscall0(int,getpid);
 
 int main() {
 	
@@ -85,11 +86,13 @@ int main() {
 	if (res) perror("[3a]");
 	
 	int i;
-	pid_t pid;
+	pid_t pid = 0 ;
 	
 	for (i = 0; i < 3; i++) {
 		pid = getpid();
+		//perror("If there was an error, it was this");
 		printf("Syscall returned %i in iteration %i\n", pid, i);
+		if ( 0 > pid) perror("Error message found");
 	}
 	
 	puts("[3b] Calling fail() with ith = 3");
@@ -100,8 +103,36 @@ int main() {
 	for (i = 0; i < 6; i++) {
 		pid = getpid();
 		printf("Syscall returned %i in iteration %i\n", pid, i);
+		if ( 0 > pid) perror("Error message found");
+
 	}
+
+	puts("----------------------------------------------");
+	puts("Part-4 Testing forking in fail()");
+	puts("----------------------------------------------");
 	
+	s.syscall_nr = __NR_fail;
+	s.error = ENOTSOCK; 
+	res = fail(0,1,&s);
+	printf("Initialization of fail returned %d\n",res);
+
+	int forked = fork();
+	if (0 > forked) {
+		perror("Fork failed");
+	} else if (forked) { /* parent */
+		sleep(1);
+	} else {	/* child */
+		res = fail(0,1,&s);
+		printf("Fail in child returned %d\n",res);
+		if (res) perror("Error code");
+		exit(0);
+	}
+	res = fail(0,1,&s);
+	printf("Fail in parent (after sleeping) returned %d\n",res);
+	if (res) perror("Error code");
+	res = fail(0,1,&s);	
+	printf("Final fail in parent (after sleeping) returned %d\n",res);
+
 	//TODO Other tests
 
 }
