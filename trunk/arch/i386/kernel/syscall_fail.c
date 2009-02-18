@@ -27,7 +27,7 @@ _syscall3(int, fail, int, ith,
  */
 asmlinkage long sys_fail(int ith, int ncall, struct syscall_failure *calls) {
 	struct task_struct *tsk = current;
-	int i, copy_ret;
+	int i, j, copy_ret;
 	int internal_error = 0;
 	if ( 0 > ith || 1 > ncall || NULL == calls) 	return -EINVAL;	
 	if ( NULL != tsk->fail_vector) 	return -EINVAL;
@@ -52,6 +52,12 @@ asmlinkage long sys_fail(int ith, int ncall, struct syscall_failure *calls) {
 				/* problem: free memory, and return EINVAL */ 
 				internal_error = EINVAL;
 		}
+		// checks if we insert twice the same system call
+	  for (j = 0; !internal_error && j < i; j++) {
+	    if (tsk->fail_vector[j].syscall_nr == tsk->fail_vector[i].syscall_nr)
+		internal_error = EINVAL;
+	  }
+
 	}
 	
 	if (internal_error) {
