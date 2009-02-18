@@ -60,6 +60,7 @@ int hlt_counter;
 unsigned long boot_option_idle_override = 0;
 EXPORT_SYMBOL(boot_option_idle_override);
 
+/* hello world syscall, used for debugging
 asmlinkage int sys_helloworld(char *arg) {
 	char *ourcopy = NULL;
 	int string_length = strlen_user(arg);
@@ -72,6 +73,7 @@ asmlinkage int sys_helloworld(char *arg) {
 	kfree(ourcopy);
 	return 0;
 }
+*/
 
 /*
  * Return saved PC of a blocked thread.

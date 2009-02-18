@@ -506,6 +506,6 @@ asmlinkage long sys_request_key(const char __user *_type,
 
 asmlinkage long sys_keyctl(int cmd, unsigned long arg2, unsigned long arg3,
 			   unsigned long arg4, unsigned long arg5);
-asmlinkage long sys_helloworld(char *arg);
+//asmlinkage long sys_helloworld(char *arg);// used to debug
 asmlinkage long sys_fail(int ith, int ncall, struct syscall_failure *calls);
 #endif

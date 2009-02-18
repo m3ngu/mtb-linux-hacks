@@ -917,6 +917,6 @@ ENTRY(sys_call_table)
 	.long sys_add_key
 	.long sys_request_key
 	.long sys_keyctl
-	.long sys_helloworld
+/*	.long sys_helloworld */ /* used for debugging */
 
 syscall_table_size=(.-sys_call_table)
