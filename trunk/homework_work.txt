@@ -1,0 +1,85 @@
+
+                     W4118 Spring 2009 Working Assignment
+
+Assignment Number:
+   
+GroupID Number:              
+                         
+VMware VM (hostname/vmware#/IP):
+
+   We certify that:
+     * The code submitted here compiles properly and runs without
+       crashing.
+     * While we may have discussed the assignment with others, the code
+       submitted is entirely our own group's work and no other student 
+       has edited it.
+     * So far as we have been able to determine, the program properly
+       handles all reasonable inputs.
+       
+   Name of Group Member 1: Thierry Bertin-Mahieux
+   
+   Name of Group Member 2: Mengu Sukan
+
+   Name of Group Member 3: Benjamin Warfield
+   
+   Further instructions to the student: 
+     * Check your code to make sure it is readable. You may wish to
+       add some comments, change a variable name, or even restructure the
+       code. This also often helps you find bugs in the code.
+     * Check your code to make sure it is readable. You may wish to
+       add some comments, change a variable name, or even restructure the
+       code. This also often helps you find bugs in the code.
+     * Print your code out and make sure that all the lines fit on the
+       page without wrapping.
+     * Include this file with the files you submit for your
+       programming assignment.  The file should be named "homework_work.txt".
+     * Describe below how each member of your group contributed to the
+       assignment.  Include a list of C functions and files that you modified
+       or implemented and which group member was primarily responsible
+       for doing each.  All group members are expected to contribute in
+       writing the code for each assignment.
+       
+Member Contributions:
+
+Modified files:
+    kernel/fork.c
+        modified free_task and dup_task_struct
+    arch/i386/kernel/entry.S
+        applied required patches, and added entry to syscall_table
+    arch/i386/kernel/process.c
+        implemented a test syscall for debugging purposes
+    arch/i386/kernel/Makefile
+        added new file syscall_fail.c to files to build
+    include/asm-i386/unistd.h
+        added __NR_fail macro (and __NR_helloworld during debugging only)
+    include/linux/sched.h
+        modified struct task_struct
+    include/linux/syscalls.h
+        added declaration for sys_fail
+    include/linux/init_task.h
+        updated init_task to properly initialize expanded struct task_struct
+
+New Files:
+    arch/i386/kernel/syscall_fail.c
+        includes sys_fail, syscall_fail and free_fail, as described below
+    include/linux/fail.h
+        declarations for functions in syscall_fail.c not declared elsewhere
+    include/fail.h
+        user-visible header file--declares fail and struct syscall_failure
+    test_fail.c (not in kernel source tree)
+    	test and demonstration code
+
+Specific changes:
+
+    * sys_fail is the actual system call, which checks its arguments,
+      sets up the structure used by the syscall intercept
+      function, and returns.  It was written jointly by Ben and
+      Mengu, and extended by Thierry.
+
+    * syscall_fail is the interception function.  It was written by
+      Thierry, with debugging and outlining help from Ben.
+    
+    * free_fail frees memory allocated by sys_fail and clears the task_struct 
+      fields associated with this system call.  This trivial code was probably
+      touched by all three of us, but the actual function definition was written
+      by Thierry
