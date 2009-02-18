@@ -71,15 +71,23 @@ New Files:
 
 Specific changes:
 
+Please note that much of the programming work (and a great deal of brainstorming 
+and figuring of things out) was done with two or three of us looking at the 
+screen, so individual credit is somewhat questionable.
+
     * sys_fail is the actual system call, which checks its arguments,
       sets up the structure used by the syscall intercept
       function, and returns.  It was written jointly by Ben and
       Mengu, and extended by Thierry.
-
     * syscall_fail is the interception function.  It was written by
       Thierry, with debugging and outlining help from Ben.
-    
     * free_fail frees memory allocated by sys_fail and clears the task_struct 
       fields associated with this system call.  This trivial code was probably
       touched by all three of us, but the actual function definition was written
-      by Thierry
+      by Thierry.
+    * the Makefile changes were made by Thierry.
+    * the header file changes were made initially by Ben and Mengu; some
+      were updated during the course of our work by whoever happened to be 
+      able to do it fastest.
+    * test_fail.c contains a program that demonstrates that this system call
+      actually works.  It was written (in stages) by Mengu and Ben.
