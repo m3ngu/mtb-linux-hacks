@@ -2,4 +2,7 @@ Command to compile the test program:
 
 gcc -static -I /usr/src/linux-2.6.11.12-hwk2/include -o test-fail test_fail.c
 
+(or make HEADERS=/usr/src/linux-2.6.11.12-hwk2/include)
+
 Then run with ./test-fail
+
