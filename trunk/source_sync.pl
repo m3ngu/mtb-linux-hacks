@@ -11,6 +11,6 @@ for (<MANIFEST>) {
 	if ( ! -e $sp or -M $sp > -M $rp) {
 		print "$_ is not up to date\n";
 #		system "diff -s $sp $rp";
-		system "cp $REPO_PATH/$_ $SOURCE_PATH/$_";
+		system "cp --remove-destination $rp $sp";
 	}
 }
