@@ -3,6 +3,7 @@
 #include "fail.h"
 #include "asm/unistd.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <sys/types.h>
 
@@ -134,5 +135,5 @@ int main() {
 	printf("Final fail in parent (after sleeping) returned %d\n",res);
 
 	//TODO Other tests
-
+	return EXIT_SUCCESS;
 }
