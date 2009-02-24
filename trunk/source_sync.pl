@@ -10,6 +10,7 @@ for (<MANIFEST>) {
 	my $sp = "$SOURCE_PATH/$_";
 	my $rp = "$REPO_PATH/$_";
 	if ( ! -e $rp ) {
+		print "Initializing $_ in repository\n";
 		system "cp $sp $rp";
 	} elsif ( ! -e $sp or -M $sp > -M $rp) {
 		print "$_ is not up to date\n";
