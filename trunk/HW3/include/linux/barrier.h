@@ -17,7 +17,7 @@ struct barrier_struct {
   int spin_lock;             // spin lock
   int waiting_count;         // items in queue
   int initial_count;         // original N, or barrier size
-  waitqueue_head_t *queue; /* needs some tightening up ;-) */  // queue
+  wait_queue_head_t *queue; /* needs some tightening up ;-) */  // queue
 };
 
 
