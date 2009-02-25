@@ -20,6 +20,7 @@ int sthread_sem_init(sthread_sem_t *sem, int count)
 	/*
 		allocate structure
 		initialize semaphore to count
+		remember init count
 		initialize queue to empty
 		set guard to 0
 		return structure (no locks, no nuthin!)
