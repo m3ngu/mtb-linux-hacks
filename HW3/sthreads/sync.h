@@ -10,7 +10,8 @@
 
 struct sthread_sem_struct {
   int spin_lock;
-  int waiting_count;
+  int waiting_count; // items in queue, useful?
+  int initial_semaphore;
   int semaphore;
   void *queue; /* needs some tightening up ;-) */
 };
