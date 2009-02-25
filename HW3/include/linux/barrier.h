@@ -6,6 +6,8 @@
 */
 
 
+#include <linux/wait.h>
+
 
 /**
  * Barrier structure
