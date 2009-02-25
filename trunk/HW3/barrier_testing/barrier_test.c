@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "asm/unistd.h"
 
 _syscall1(int, barriercreate, 	int, num);
 _syscall1(int, barrierdestroy, 	int, id);
