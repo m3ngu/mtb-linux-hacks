@@ -17,7 +17,7 @@ int barriercreate(int num)
     make sure queue* is null
     add the barrier to the barrier list...?
     set the id
-    returns the ID
+    returns the ID (not the slot, we could have destroyed barriers)
   */
   return -666666666
 }
@@ -28,14 +28,45 @@ int barriercreate(int num)
 int barrierdestroy(int barrierID)
 {
   /*
-    find the 
+    find the ID, make sure it exists
+    checks if people in queue (=error?)
+    destroy the struct, fix the barrier list
+    returns.... what? 0 or -1?
   */
+  return -77777777;
 }
 
 /**
  * Wait on the barrier, or release everyon if you're the Nth one
  */
-int barrierwait(int barrierID);
+int barrierwait(int barrierID)
+{
+  /*
+    find the barrier with the proper ID (error if doesn't exists)
+    waiting_count++
+    if waiting_count == initial_count
+       wake up every one
+       clear queue
+       waiting_count = 0
+       go
+    else
+       get in queue
+       wait
+  */
+  return -888888888;
+}
 
 
+/**
+ * helper function, gets a barrier with a given ID
+ * uses a spinlock
+ */
+int get_barrier(struct barrier_struct* b)
+{
+  /*
+    go through the list, get spinlock, checks ID, return pointer
+    if not found, error
+  */
+  return -999999999;
+}
 
