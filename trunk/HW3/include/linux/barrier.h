@@ -11,6 +11,7 @@
  * Barrier structure
  */
 struct barrier_struct {
+  int bID;                   // barrier ID
   int spin_lock;             // spin lock
   int waiting_count;         // items in queue
   int initial_count;         // original N, or barrier size
