@@ -18,7 +18,7 @@ static void *barrier_list_head;
 /**
  * Creates a barrier
  */
-int barriercreate(int num)
+int sys_barriercreate(int num)
 {
   /*
     create a new barrier struct
@@ -35,7 +35,7 @@ int barriercreate(int num)
 /**
  * Destroys a barrier
  */
-int barrierdestroy(int barrierID)
+int sys_barrierdestroy(int barrierID)
 {
   /*
     find the barrier with ID, make sure it exists
@@ -54,7 +54,7 @@ int barrierdestroy(int barrierID)
 /**
  * Wait on the barrier, or release everyone if you're the Nth one
  */
-int barrierwait(int barrierID)
+int sys_barrierwait(int barrierID)
 {
   /*
   	set return value to 0
@@ -89,7 +89,7 @@ int barrierwait(int barrierID)
  * helper function, gets a barrier with a given ID
  * uses a spinlock
  */
-int get_barrier(struct barrier_struct* b, int barrierID)
+int _get_barrier(struct barrier_struct* b, int barrierID)
 {
   /*
     go through the list, checks ID, return pointer
