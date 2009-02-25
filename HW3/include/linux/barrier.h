@@ -16,3 +16,20 @@ struct barrier_struct {
   int initial_count;         // original N, or barrier size
   void *queue; /* needs some tightening up ;-) */  // queue
 };
+
+
+
+/**
+ * Creates a barrier
+ */
+int barriercreate(int num);
+
+/**
+ * Destroys a barrier
+ */
+int barrierdestroy(int barrierID);
+
+/**
+ * Wait on the barrier, or release everyon if you're the Nth one
+ */
+int barrierwait(int barrierID);
