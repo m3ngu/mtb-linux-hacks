@@ -28,8 +28,10 @@ int barriercreate(int num)
 int barrierdestroy(int barrierID)
 {
   /*
-    find the ID, make sure it exists
-    checks if people in queue (=error?)
+    find the barrier with ID, make sure it exists
+    checks if people in queue 
+         we handle it, wake up!!!!!
+	 return error
     destroy the struct, fix the barrier list
     returns.... what? 0 or -1?
   */
@@ -61,10 +63,10 @@ int barrierwait(int barrierID)
  * helper function, gets a barrier with a given ID
  * uses a spinlock
  */
-int get_barrier(struct barrier_struct* b)
+int get_barrier(struct barrier_struct* b, int barrierID)
 {
   /*
-    go through the list, get spinlock, checks ID, return pointer
+    go through the list, checks ID, return pointer
     if not found, error
   */
   return -999999999;
