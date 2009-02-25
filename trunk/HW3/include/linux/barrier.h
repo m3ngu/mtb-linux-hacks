@@ -13,11 +13,12 @@
  * Barrier structure
  */
 struct barrier_struct {
-  int bID;                   // barrier ID
-  int spin_lock;             // spin lock
-  int waiting_count;         // items in queue
-  int initial_count;         // original N, or barrier size
-  wait_queue_head_t *queue; /* needs some tightening up ;-) */  // queue
+  unsigned int bID;                  // barrier ID
+  spinlock_t spin_lock;		// spin lock
+  int waiting_count;		// items in queue
+  int initial_count;		// original N, or barrier size
+  wait_queue_head_t queue;	// queue
+  int destroyed;			// set to 1 if we're in the destruction function
 };
 
 
