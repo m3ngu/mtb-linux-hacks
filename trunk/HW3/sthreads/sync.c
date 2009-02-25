@@ -30,6 +30,7 @@ int sthread_sem_destroy(sthread_sem_t *sem)
 {
 	/*
 		obtain spinlock
+		check semaphore back to initial count, if not -> error
 		check for waiters: if any
 			return error (or just wake everybody?)
 		else 
