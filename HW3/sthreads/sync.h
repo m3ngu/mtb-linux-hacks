@@ -9,7 +9,10 @@
 
 
 struct sthread_sem_struct {
-  /* FILL ME IN! */
+  int spin_lock;
+  int waiting_count;
+  int semaphore;
+  void *queue; /* needs some tightening up ;-) */
 };
 
 typedef struct sthread_sem_struct sthread_sem_t;
