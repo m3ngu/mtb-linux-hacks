@@ -890,5 +890,8 @@ ENTRY(sys_call_table)
 	.long sys_add_key
 	.long sys_request_key
 	.long sys_keyctl
+	.long sys_barriercreate
+	.long sys_barrierdestroy	/* 290 */
+	.long sys_barrierwait
 
 syscall_table_size=(.-sys_call_table)
