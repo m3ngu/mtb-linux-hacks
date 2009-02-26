@@ -113,13 +113,13 @@ int _get_barrier(struct barrier_struct* b, int barrierID)
     go through the list, checks ID, return pointer
     if not found, error
   */
-  struct barrier_node *tmp;
+  struct barrier_node tmp;
   struct list_head *pos;
-  list_for_each( pos, &(*barrier_list.list) ){
+  list_for_each( pos, &((*barrier_list).list) ){
     tmp= list_entry(pos, struct barrier_node, list);
-    if (tmp->barrier->bID == barrierID)
+    if (tmp.barrier.bID == barrierID)
       {
-	b = tmp->barrier;
+	b = &(tmp.barrier);
 	return 0;
       }
   }
@@ -137,13 +137,13 @@ int _add_barrier_node(struct barrier_struct* b)
   struct barrier_node *tmp;
   // makes sure the list is initialized
   if (barrier_list == NULL)
-    INIT_LIST_HEAD(*barrier_list.list);
+    INIT_LIST_HEAD( &((*barrier_list).list) );
   tmp= (struct barrier_node *)kalloc(sizeof(struct barrier_node));
   // should check for kalloc error here!!!!!!!!!
   // copy b to tmp... deep or shallow copy? shallow
-  tmp->barrier = b;
+  (*tmp).barrier = b;
   // add tmp node to the global list
-  list_add(&(tmp->list), &(barrier_list.list));
+  list_add( &((*tmp).list), &((*barrier_list).list) );
   // if we're here, everything should have worked
   return 0;
 }
