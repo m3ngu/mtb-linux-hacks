@@ -3,13 +3,14 @@
 	2/25/2009
 	Ben Warfield, Mengu Sukan, Thierry Bertin-Mahieux
 */
-/* necessary globals: */
 
 
 #include <linux/list.h>
-#include <linux/unistd.h>
+#include <linux/unistd.h> // do we need this one
 #include <linux/barrier.h>
 
+
+/* necessary globals: */
 static unsigned int next_id = 1;
 /* optionally: */
 static unsigned int last_destroyed = 0;
