@@ -5,6 +5,10 @@
 */
 /* necessary globals: */
 
+
+#include <linux/list.h>
+
+
 static unsigned int next_id = 1;
 /* optionally: */
 static unsigned int last_destroyed = 0;
@@ -12,7 +16,21 @@ static unsigned int last_destroyed = 0;
 /* this is the wrong type: if possible, we should just piggy-back
 	on some existing linked-list kernel structure.
 */
-static void *barrier_list_head;
+//static void *barrier_list_head;
+
+
+/**
+ * Right implementation using linux/list.h
+ */
+// list node
+struct barrier_node {
+  struct list_head list; //linux kernel list implementation//
+  struct barrier_struct barrier;
+};
+// actual list
+static struct barrier_node *barrier_list;
+
+
 
 
 /**
@@ -96,6 +114,26 @@ int _get_barrier(struct barrier_struct* b, int barrierID)
     if not found, error
   */
   return -999999999;
+}
+
+
+/**
+ * Add a barrier node to the barrier list, don't check for any problems
+ */
+int _add_barrier_node(struct barrier_struct* b)
+{
+  struct barrier_node *tmp;
+  // makes sure the list is initialized
+  if (barrier_list == NULL)
+    INIT_LIST_HEAD(barrier_list->list);
+  tmp= (struct barrier_node *)kalloc(sizeof(struct barrier_node));
+  // should check for kalloc error here!!!!!!!!!
+  // copy b to tmp... deep or shallow copy? shallow
+  tmp->barrier = b;
+  // add tmp node to the global list
+  list_add(&(tmp->list), &(barrier_list->list));
+  // if we're here, everything should have worked
+  return 0;
 }
 
 unsigned int _next_id(void) {
