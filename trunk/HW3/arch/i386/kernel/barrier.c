@@ -26,7 +26,7 @@ static unsigned int last_destroyed = 0;
 // list node
 struct barrier_node {
   struct list_head list; //linux kernel list implementation//
-  struct barrier_struct barrier;
+  struct barrier_struct *barrier;
 };
 // actual list
 static struct barrier_node *barrier_list;
@@ -48,7 +48,7 @@ int sys_barriercreate(int num)
     set the id
     returns the ID (not the slot, we could have destroyed barriers)
   */
-  return -666666666
+  return -666666666;
 }
 
 /**
@@ -118,9 +118,9 @@ int _get_barrier(struct barrier_struct* b, int barrierID)
   struct list_head *pos;
   list_for_each( pos, &((*barrier_list).list) ){
     tmp = list_entry(pos, struct barrier_node, list);
-    if ((*tmp).barrier.bID == barrierID)
+    if ((*(*tmp).barrier).bID == barrierID)
       {
-	b = &((*tmp).barrier);
+	b = (*tmp).barrier;
 	return 0;
       }
   }
