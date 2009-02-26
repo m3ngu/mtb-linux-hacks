@@ -7,7 +7,7 @@
 
 
 #include <linux/list.h>
-#include <kern/kalloc.h>
+#include <linux/unistd.h>
 #include <linux/barrier.h>
 
 static unsigned int next_id = 1;
@@ -114,13 +114,13 @@ int _get_barrier(struct barrier_struct* b, int barrierID)
     go through the list, checks ID, return pointer
     if not found, error
   */
-  struct barrier_node tmp;
+  struct barrier_node *tmp;
   struct list_head *pos;
   list_for_each( pos, &((*barrier_list).list) ){
-    tmp= list_entry(pos, struct barrier_node, list);
-    if (tmp.barrier.bID == barrierID)
+    tmp = list_entry(pos, struct barrier_node, list);
+    if ((*tmp).barrier.bID == barrierID)
       {
-	b = &(tmp.barrier);
+	b = &((*tmp).barrier);
 	return 0;
       }
   }
