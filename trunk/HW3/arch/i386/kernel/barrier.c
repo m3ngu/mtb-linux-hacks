@@ -113,12 +113,24 @@ int _get_barrier(struct barrier_struct* b, int barrierID)
     go through the list, checks ID, return pointer
     if not found, error
   */
-  return -999999999;
+  struct barrier_node *tmp;
+  struct list_head *pos;
+  list_for_each( pos, &(barrier_list->list) ){
+    tmp= list_entry(pos, struct barrier_node, list);
+    if (tmp->barrier->bID == barrierID)
+      {
+	b = tmp->barrier;
+	return 0;
+      }
+  }
+  // we should set a particular ERROR here!!!!!!!
+  return -1;
 }
 
 
 /**
  * Add a barrier node to the barrier list, don't check for any problems
+ * cool tutorial: http://isis.poly.edu/kulesh/stuff/src/klist/
  */
 int _add_barrier_node(struct barrier_struct* b)
 {
