@@ -7,7 +7,8 @@
 
 
 #include <linux/list.h>
-
+#include <kern/kalloc.h>
+#include <linux/barrier.h>
 
 static unsigned int next_id = 1;
 /* optionally: */
