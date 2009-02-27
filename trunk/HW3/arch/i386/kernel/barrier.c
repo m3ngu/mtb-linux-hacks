@@ -51,17 +51,12 @@ asmlinkage int sys_barriercreate(int num)
   b = (struct barrier_struct *)kmalloc(sizeof(struct barrier_struct),GFP_KERNEL);
   if (NULL == b) {return -ENOMEM;}
   // init fields
-  (*b).initial_count = num;
-  (*b).waiting_count = 0;
-
+  //(*b).initial_count = num;
+  //(*b).waiting_count = 0;
+  b->initial_count = num;
+  b->waiting_count = 0;
   // init wait queue head
-  //DELARE_WAIT_QUEUE_HEAD( (*b).queue );
-  //(*b).queue = __WAIT_QUEUE_HEAD_INITIALIZER( (*b).queue );
-  init_waitqueue_head( (*b).queue );
-  //(*b).queue.lock = SPIN_LOCK_UNLOCKED;
-  //(*b).queue.task_list = { &(*b).queue.task_list , &(*b).queue.task_list };
-
-  //(*b).queue = NULL;
+  //init_waitqueue_head( (*b).queue );
   // add barrier to the list
   _add_barrier_node(b);
   // checks errors....
