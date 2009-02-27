@@ -10,7 +10,6 @@
 #include <linux/linkage.h> // asmlinkage
 #include <linux/errno.h>
 #include <linux/barrier.h>
-#include <linux/malloc.h>
 #include <linux/sched.h>
 
 
@@ -53,7 +52,7 @@ asmlinkage int sys_barriercreate(int num)
   // init fields
   (*b).initial_count = num;
   (*b).waiting_count = 0;
-  (*b).queue = NULL;
+  //(*b).queue = NULL;
   // add barrier to the list
   _add_barrier_node(b);
   // checks errors....
