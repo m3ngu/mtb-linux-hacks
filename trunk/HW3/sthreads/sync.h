@@ -7,13 +7,15 @@
 #ifndef _STHREAD_SYNC_H_
 #define _STHREAD_SYNC_H_
 
+typedef struct sthread_thread_queue sthread_queue_t;
 
 struct sthread_sem_struct {
-  int spin_lock;
-  int waiting_count; // items in queue, useful?
+  unsigned long spin_lock;
   int initial_semaphore;
   int semaphore;
-  void *queue; /* needs some tightening up ;-) */
+  sthread_queue_t *queuehead; /* needs some tightening up ;-) */
+  sthread_queue_t **nextqtail;
+  int destroyed;
 };
 
 typedef struct sthread_sem_struct sthread_sem_t;
