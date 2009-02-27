@@ -9,9 +9,9 @@
 #include <linux/unistd.h> // do we need this one
 #include <linux/linkage.h> // asmlinkage
 #include <linux/errno.h>
-#include <linux/barrier.h>
 #include <linux/sched.h>
 #include <linux/wait.h>
+#include <linux/barrier.h>
 
 
 /* necessary globals: */
@@ -51,12 +51,10 @@ asmlinkage int sys_barriercreate(int num)
   b = (struct barrier_struct *)kmalloc(sizeof(struct barrier_struct),GFP_KERNEL);
   if (NULL == b) {return -ENOMEM;}
   // init fields
-  //(*b).initial_count = num;
-  //(*b).waiting_count = 0;
   b->initial_count = num;
   b->waiting_count = 0;
   // init wait queue head
-  //init_waitqueue_head( (*b).queue );
+  init_waitqueue_head( (*b).queue );
   // add barrier to the list
   _add_barrier_node(b);
   // checks errors....
