@@ -8,7 +8,42 @@
 
 #define _REENTRANT
 
+#include <stdlib.h>
 #include "sthread.h"
+#include "sync.h"
+
+#define STHREAD_DEBUG
+
+#ifdef STHREAD_DEBUG
+#include <stdio.h>
+#define DEBUG(s) fprintf(stderr,"%s\n",s)
+#else
+#define DEBUG(s)
+#endif
+
+struct sthread_thread_queue {
+	sthread_t thread;
+	struct sthread_thread_queue *next;
+};
+
+#define _spin_lock(s) 	while (test_and_set( &((s)->spin_lock))) { ; /* spin */}
+#define _spin_unlock(s) ( (s)->spin_lock = 0 )
+#define _sem_init(v)	 	{ 						\
+							.spin_lock = 0,			\
+							.initial_semaphore = v,	\
+							.semaphore = v,			\
+							.queuehead = NULL, 		\
+							.nextqtail = NULL,		\
+							.destroyed = 0,			\
+							}
+/* not safe vs. function calls */
+#define _sem_avail(s)	( (s)->semaphore > 0 && NULL == (s)->queuehead)
+#define _sem_valid_check(s) if (s->destroyed) { _spin_unlock(s); return -1;}
+#define _sem_lock_and_check(s)	_spin_lock(s); _sem_valid_check(s);
+
+
+/* XXX need a block comment here */
+sthread_queue_t *_make_queue_elem();
 
 
 /*
@@ -17,8 +52,12 @@
 
 int sthread_sem_init(sthread_sem_t *sem, int count)
 {
+	if ( 0 >= count ) return -1; /* invalid count */
+	struct sthread_sem_struct s = _sem_init(count);
+	s.nextqtail = &(s.queuehead);
+	*sem = s;
+	return 0;
 	/*
-		allocate structure
 		initialize semaphore to count
 		remember init count
 		initialize queue to empty
@@ -29,6 +68,14 @@ int sthread_sem_init(sthread_sem_t *sem, int count)
 
 int sthread_sem_destroy(sthread_sem_t *sem)
 {
+	_sem_lock_and_check(sem);
+	sem->destroyed = 1;
+	if ( sem->semaphore != sem->initial_semaphore ) {
+		/* error condition */
+		return -1;
+	}
+	_spin_unlock(sem); /* interesting point, this... */
+	return 0;
 	/*
 		obtain spinlock
 		check semaphore back to initial count, if not -> error
@@ -42,9 +89,51 @@ int sthread_sem_destroy(sthread_sem_t *sem)
 
 int sthread_sem_down(sthread_sem_t *sem)
 {
+	/* short-circuit attempt: try to get the semaphore without blocking */
+	DEBUG("Entering full sem_down");
+	if ( 0 == sthread_sem_try_down(sem) ) return 0;
+	sthread_queue_t *q = _make_queue_elem();
+
+	_sem_lock_and_check(sem);	/* BEGIN CRITICAL SECTION */
+	if ( _sem_avail(sem) ) { /* well, won't we look silly */
+		--sem->semaphore;
+		_spin_unlock(sem);
+		free(q);
+		DEBUG("Semaphore freed up while allocating queue element");
+		return 0;
+	}
+
+	*(sem->nextqtail) = q;	/* enqueue self */
+	sem->nextqtail = &(q->next);
+
+	for (;;) {
+		_spin_unlock(sem);	/* EXIT CRIT */
+		DEBUG("putting thread to sleep");
+		sthread_suspend();	/* snooze */
+		DEBUG("waiting thread woke up");
+		_sem_lock_and_check(sem); /* REENTER */
+		if ( 0 < sem->semaphore && q == sem->queuehead ) {
+			/* we may proceed */
+			break;
+			DEBUG("Semaphore free: proceeding");
+		} 
+	}
+	/* we hold the lock now, so just do the standard manipulations */
+	--sem->semaphore;
+	/* dequeue self */
+	sem->queuehead = sem->queuehead->next; 
+	if ( NULL == sem->queuehead ) {
+		sem->nextqtail = &(sem->queuehead);
+	} else { /* ( NULL != sem->queuehead ) */
+		sthread_wake(sem->queuehead->thread);
+	}
+	_spin_unlock(sem); /* EXIT */
+	free(q);
+	return 0;
+
+	
 	/* 
-	before anything, allocated a queue element (may sleep)
-		// alternate plan: try sthread_sem_try_down first
+	before anything, call sthread_sem_try_down
 		// 		pro: avoids potentially useless memory allocation
 		//			 makes common case fast
 		//		con: requires taking spin lock twice
@@ -55,7 +144,7 @@ int sthread_sem_down(sthread_sem_t *sem)
 		release spin lock
 		free unused queue element
 		return
-	if unavailable
+	else 
 		increment waiting count
 		enqueue self, using preallocated queue element
 		release spinlock
@@ -69,6 +158,8 @@ int sthread_sem_down(sthread_sem_t *sem)
 			decrement waiting count
 			dequeue self
 			decrement count
+			if queue not empty, wake next
+				(it may need to snooze, but ... well, think about that)
 			release spinlock
 			free queue element
 			return
@@ -77,6 +168,18 @@ int sthread_sem_down(sthread_sem_t *sem)
 
 int sthread_sem_try_down(sthread_sem_t *sem)
 {
+	DEBUG("Entering try_down");
+	_sem_lock_and_check(sem);
+	if ( _sem_avail(sem) ) {
+		--sem->semaphore;
+		_spin_unlock(sem);
+		DEBUG("semaphore available!");
+		return 0;
+	} else {
+		_spin_unlock(sem);
+		DEBUG("semaphore unavailable.");
+		return -1;
+	}
 	/*
 		obtain spin lock
 		check semaphore count
@@ -85,12 +188,23 @@ int sthread_sem_try_down(sthread_sem_t *sem)
 			release spin lock
 			return 0
 		else 
+			release spin lock
 			return -1
 	*/
 }
 
 int sthread_sem_up(sthread_sem_t *sem)
 {
+	DEBUG("trying to raise semaphore...");
+	_sem_lock_and_check(sem);
+	++sem->semaphore;
+	if ( NULL != sem->queuehead ) {
+		DEBUG("found waiters: waking first");
+		sthread_wake(sem->queuehead->thread);
+	}
+	_spin_unlock(sem);
+	DEBUG("lock released: leaving sem_up");
+	return 0;
 	/* obtain spin lock
 		increment semaphore count
 		if waiters
@@ -101,4 +215,11 @@ int sthread_sem_up(sthread_sem_t *sem)
 
 }
 
-
+sthread_queue_t *_make_queue_elem() {
+	sthread_t this = sthread_self();
+	sthread_queue_t *q = malloc(sizeof(sthread_queue_t));
+	if (NULL == q) return NULL; /* oh dear */
+	q->next = NULL;
+	q->thread = this;
+	return q;
+}
