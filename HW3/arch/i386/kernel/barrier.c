@@ -7,6 +7,8 @@
 
 #include <linux/list.h>
 #include <linux/unistd.h> // do we need this one
+#include <linux/linkage.h> // asmlinkage
+#include <linux/errno.h>
 #include <linux/barrier.h>
 
 
@@ -38,24 +40,30 @@ static struct barrier_node *barrier_list;
 /**
  * Creates a barrier
  */
-int sys_barriercreate(int num)
+asmlinkage int sys_barriercreate(int num)
 {
-  /*
-    create a new barrier struct
-    set the initial_count = num
-    set wait_count = 0
-    make sure queue* is null
-    add the barrier to the barrier list...?
-    set the id
-    returns the ID (not the slot, we could have destroyed barriers)
-  */
-  return -666666666;
+  // check input
+  if(num < 1) {return -EINVAL;}
+  // create barrier, allocate memory
+  struct barrier *b;
+  b = (struct barrier *)kmalloc(sizeof(struct barrier),GFP_KERNEL);
+  if (NULL == b) {return -ENOMEM;}
+  // init fields
+  (*b).initial_count = num;
+  (*b).waiting_count = 0;
+  (*b).queue = NULL;
+  // add barrier to the list
+  _add_barrier_node(b);
+  // checks errors....
+  (*b).bID = next_id;
+  next_id++; // better id management later...
+  return (*b).bID;
 }
 
 /**
  * Destroys a barrier
  */
-int sys_barrierdestroy(int barrierID)
+asmlinkage int sys_barrierdestroy(int barrierID)
 {
   /*
     find the barrier with ID, make sure it exists
@@ -74,7 +82,7 @@ int sys_barrierdestroy(int barrierID)
 /**
  * Wait on the barrier, or release everyone if you're the Nth one
  */
-int sys_barrierwait(int barrierID)
+asmlinkage int sys_barrierwait(int barrierID)
 {
   /*
   	set return value to 0
@@ -140,8 +148,8 @@ int _add_barrier_node(struct barrier_struct* b)
   // makes sure the list is initialized
   if (barrier_list == NULL)
     INIT_LIST_HEAD( &((*barrier_list).list) );
-  tmp= (struct barrier_node *)kalloc(sizeof(struct barrier_node));
-  // should check for kalloc error here!!!!!!!!!
+  tmp= (struct barrier_node *)kmalloc(sizeof(struct barrier_node),GFP_KERNEL);
+  // should check for kmalloc error here!!!!!!!!!
   // copy b to tmp... deep or shallow copy? shallow
   (*tmp).barrier = b;
   // add tmp node to the global list

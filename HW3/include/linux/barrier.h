@@ -7,6 +7,7 @@
 
 
 #include <linux/wait.h>
+#include <linux/init.h> // if we need to init the barrier_list... or in the .c?
 
 
 /**
