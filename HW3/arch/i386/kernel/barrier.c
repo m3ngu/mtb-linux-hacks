@@ -57,7 +57,7 @@ asmlinkage int sys_barriercreate(int num)
   // init wait queue head
   //DELARE_WAIT_QUEUE_HEAD( (*b).queue );
   (*b).queue.lock = SPIN_LOCK_UNLOCKED;
-  (*b).queue.task_list = { &(*b).queue.task_list , &(*b).queue.task_list };
+  //(*b).queue.task_list = { &(*b).queue.task_list , &(*b).queue.task_list };
 
   //(*b).queue = NULL;
   // add barrier to the list
