@@ -45,8 +45,8 @@ asmlinkage int sys_barriercreate(int num)
   // check input
   if(num < 1) {return -EINVAL;}
   // create barrier, allocate memory
-  struct barrier *b;
-  b = (struct barrier *)kmalloc(sizeof(struct barrier),GFP_KERNEL);
+  struct barrier_struct *b;
+  b = (struct barrier_struct *)kmalloc(sizeof(struct barrier_struct),GFP_KERNEL);
   if (NULL == b) {return -ENOMEM;}
   // init fields
   (*b).initial_count = num;
