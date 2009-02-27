@@ -10,6 +10,7 @@
 #include <linux/linkage.h> // asmlinkage
 #include <linux/errno.h>
 #include <linux/barrier.h>
+#include <linux/malloc.h>
 
 
 /* necessary globals: */
