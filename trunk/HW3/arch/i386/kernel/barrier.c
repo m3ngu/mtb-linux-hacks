@@ -11,6 +11,7 @@
 #include <linux/errno.h>
 #include <linux/barrier.h>
 #include <linux/malloc.h>
+#include <linux/sched.h>
 
 
 /* necessary globals: */
