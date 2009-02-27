@@ -1,4 +1,4 @@
-/* barrier.h
+ema/* barrier.h
 	Implementation of barrier synchronization primitive for Linux 2.6.11.12
 	HEADER FILE
 	2/25/2009
@@ -38,3 +38,12 @@ int barrierdestroy(int barrierID);
  * Wait on the barrier, or release everyon if you're the Nth one
  */
 int barrierwait(int barrierID);
+
+
+int _get_barrier(struct barrier_struct* b, int barrierID);
+
+
+int _add_barrier_node(struct barrier_struct* b);
+
+
+unsigned int _next_id(void);
