@@ -21,11 +21,6 @@ static unsigned int next_id = 1;
 /* optionally: */
 static unsigned int last_destroyed = 0;
 
-/* this is the wrong type: if possible, we should just piggy-back
-	on some existing linked-list kernel structure.
-*/
-//static void *barrier_list_head;
-
 
 /**
  * Right implementation using linux/list.h
@@ -36,11 +31,9 @@ struct barrier_node {
   struct barrier_struct *barrier;
 };
 // actual list
-static struct barrier_node *barrier_list = NULL;
+//static struct barrier_node *barrier_list = NULL;
+static struct list_head *barrier_list = NULL;
 
-// spinlock helpers
-//#define _spin_lock(b) 	while (test_and_set( b->spin_lock))) { ; /* spin */}
-//#define _spin_unlock(b) ( b->spin_lock = 0 )
 
 
 /**
@@ -103,8 +96,8 @@ asmlinkage int sys_barrierdestroy(int barrierID)
   // destroy the struct, can we sleep here?
   kfree(b);
   // remove and delete node, if it was the last set list to NULL
-  if ( list_is_last( &(bn->list), &(barrier_list->list) ) )
-    list_del_init( &(barrier_list->list) );
+  if ( list_is_last( &(bn->list), barrier_list ) )
+    list_del_init( barrier_list );
   list_del( &(bn->list) );
   kfree(bn);
   /*
@@ -192,7 +185,7 @@ struct barrier_node* _get_barrier_node(int barrierID)
   */
   struct barrier_node *tmp;
   struct list_head *pos;
-  list_for_each( pos, &(barrier_list->list) ){
+  list_for_each( pos, barrier_list ){
     tmp = list_entry(pos, struct barrier_node, list);
     if (tmp->barrier->bID == barrierID)
       {
@@ -226,13 +219,13 @@ int _add_barrier_node(struct barrier_struct* b)
   struct barrier_node *tmp;
   // makes sure the list is initialized
   if (barrier_list == NULL)
-    INIT_LIST_HEAD( &(barrier_list->list) );
+    INIT_LIST_HEAD( barrier_list );
   tmp= (struct barrier_node *)kmalloc(sizeof(struct barrier_node),GFP_KERNEL);
   if (NULL == tmp) {return -ENOMEM;}
   // copy b to tmp... deep or shallow copy? shallow
   tmp->barrier = b;
   // add tmp node to the global list
-  list_add( &(tmp->list), &(barrier_list->list) );
+  list_add( &(tmp->list), barrier_list );
   // DOES LIST_ADD RETURNS ERROR?
   // if we're here, everything should have worked
   return 0;
