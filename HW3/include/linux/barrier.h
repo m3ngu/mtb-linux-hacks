@@ -39,14 +39,24 @@ int barrierdestroy(int barrierID);
  */
 int barrierwait(int barrierID);
 
-
+/**
+ * helper function, gets a barrier node that contains the barrier with a given ID
+ * returns NULL if it was not found
+ */
 struct barrier_node* _get_barrier_node(int barrierID);
 
-
+/**
+ * helper function, gets a barrier with a given ID
+ * returns NULL if it was not found
+ */
 struct barrier_struct* _get_barrier(int barrierID);
 
-
+/**
+ * Add a barrier node to the barrier list, don't check for any problems
+ */
 int _add_barrier_node(struct barrier_struct* b);
 
-
+/**
+ * Generates IDs for newly created barriers
+ */
 unsigned int _next_id(void);
