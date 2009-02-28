@@ -208,7 +208,6 @@ struct barrier_node* _get_barrier_node(int barrierID)
 struct barrier_struct* _get_barrier(int barrierID)
 {
   struct barrier_node *bn;
-  int return_value = 0;
   bn = _get_barrier_node(barrierID);
   if (bn == NULL)
     return NULL;
