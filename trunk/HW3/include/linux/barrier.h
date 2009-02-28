@@ -40,7 +40,10 @@ int barrierdestroy(int barrierID);
 int barrierwait(int barrierID);
 
 
-int _get_barrier(struct barrier_struct* b, int barrierID);
+struct barrier_node* _get_barrier_node(struct barrier_node *bn, int barrierID);
+
+
+struct barrier_struct* _get_barrier(struct barrier_struct* b, int barrierID);
 
 
 int _add_barrier_node(struct barrier_struct* b);
