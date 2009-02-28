@@ -28,10 +28,10 @@ int threadsem(void *arg) {
 
 int main(int argc, char *argv[]) {
   sthread_t thr1, thr2, thr3, thr4;
-
+  
   if (sthread_init() == -1)
     fprintf(stderr, "%s: sthread_init: %s\n", argv[0], strerror(errno));
-
+if (0) {
   if (sthread_create(&thr1, threadmain, (void *)1) == -1)
     fprintf(stderr, "%s: sthread_create: %s\n", argv[0], strerror(errno));
 
@@ -46,15 +46,18 @@ int main(int argc, char *argv[]) {
   sthread_wake(thr1);
   sthread_wake(thr2);
   sleep(1);
-  
+  }
   sthread_sem_t sem1;
   sthread_sem_init(&sem1,1);
-  
+  	if (sthread_create(&thr1, threadsem, (void *) &sem1) == -1)
+		fprintf(stderr, "%s: sthread_create: %s\n", argv[0], strerror(errno));  
+	if (sthread_create(&thr2, threadsem, (void *) &sem1) == -1)
+		fprintf(stderr, "%s: sthread_create: %s\n", argv[0], strerror(errno));  
 	if (sthread_create(&thr3, threadsem, (void *) &sem1) == -1)
 		fprintf(stderr, "%s: sthread_create: %s\n", argv[0], strerror(errno));
     if (sthread_create(&thr4, threadsem, (void *) &sem1) == -1)
 		fprintf(stderr, "%s: sthread_create: %s\n", argv[0], strerror(errno));
 
-
+	sleep(10);
   return 0;
 }
