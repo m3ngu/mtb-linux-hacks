@@ -125,15 +125,16 @@ asmlinkage int sys_barrierwait(int barrierID)
     {
       //get in queue
       DEFINE_WAIT(wait);
-      while (1) { // do we need a  condition? head of the queue?
-        prepare_to_wait(&(b->queue), &wait, TASK_INTERRUPTIBLE);
-	// release lock
-	_spin_unlock(b);
-	// go to sleep
-	if (1) // do we need a  condition? head of the queue?
+      while (1) // do we need a  condition? head of the queue?
+	{ 
+	  prepare_to_wait( b->queue , &wait, TASK_INTERRUPTIBLE);
+	  // release lock
+	  _spin_unlock(b);
+	  // go to sleep
+	  if (1) // do we need a  condition? head of the queue?
 	    schedule();
-        finish_wait(&(b->queue), &wait)
-      }
+	  finish_wait( b->queue , &wait)
+	}
       //if barrier is marked destroyed, set return to -1
       if (b->destroyed == 1)
 	return_value = -1;
