@@ -74,22 +74,41 @@ asmlinkage int sys_barriercreate(int num)
 
 /**
  * Destroys a barrier
+ * Returns -num of awoken processes (it's considered an error)
  */
 asmlinkage int sys_barrierdestroy(int barrierID)
 {
   struct barrier_struct *b;
+  struct barrier_node *bn;
+  int return_value = 0;
+  // check ID validity
+  if (barrierID < 0) {return -EINVAL;}
+  // find the barrier node and barrier
+  bn = _get_barrier_node( barrierID );
+  if (bn == NULL)
+    return return_value;
+  b = bn->barrier;
+  // lock barrier
+  spin_lock( &(b->spin_lock) );
+  // set destroyed mode
+  b->destroyed = 1;
+  // if people in queue, wake them up, and count
+  if (b->waiting_count > 0)
+    {        
+      // wake up everyone
+      wake_up_all(b->queue);
+      // remember - number of awoken processes
+      return_value = - b->waiting_count;
+    }
+  // destroy the struct, can we sleep here?
+  kfree(b,GFP_KERNEL);
+  // remove and delete node
+  list_del( &(bn->list) );
+  kfree(bn,GFP_KERNEL);
   /*
-    find the barrier with ID, make sure it exists
-    lock barrier
-    set barrier.destroyed
-    checks if people in queue 
-        wake them up
-    otherwise:
-    	destroy the struct, fix the barrier list
-    unlock the barrier
-    return number of awoken processes
-  */
-  return -77777777;
+   * What happens if the list is now empty???? pointer to NULL?
+   */
+  return return_value;
 }
 
 /**
@@ -159,12 +178,11 @@ asmlinkage int sys_barrierwait(int barrierID)
   return return_value;
 }
 
-
 /**
- * helper function, gets a barrier with a given ID
- * uses a spinlock
+ * helper function, gets a barrier node that contains the barrier with a given ID
+ * returns NULL if it was not found
  */
-int _get_barrier(struct barrier_struct* b, int barrierID)
+struct barrier_node* _get_barrier_node(int barrierID)
 {
   /*
     go through the list, checks ID, return pointer
@@ -176,11 +194,25 @@ int _get_barrier(struct barrier_struct* b, int barrierID)
     tmp = list_entry(pos, struct barrier_node, list);
     if (tmp->barrier->bID == barrierID)
       {
-	b = tmp->barrier;
-	return 0;
+	return tmp;
       }
   }
-  return -1;
+  return NULL;
+}
+
+
+/**
+ * helper function, gets a barrier with a given ID
+ * returns NULL if it was not found
+ */
+struct barrier_struct* _get_barrier(int barrierID)
+{
+  struct barrier_node *bn;
+  int return_value = 0;
+  bn = _get_barrier_node(barrier_id);
+  if (bn == NULL)
+    return NULL;
+  return bn->barrier;
 }
 
 
