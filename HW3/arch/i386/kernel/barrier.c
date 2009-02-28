@@ -56,9 +56,9 @@ asmlinkage int sys_barriercreate(int num)
   init_waitqueue_head( b->queue );
   // CHECKS ERROR
   // add barrier to the list
-  //err = _add_barrier_node(b);
-  //if (err < 0)
-  //  return -1;
+  err = _add_barrier_node(b);
+  if (err < 0)
+    return -1;
   // set ID, returns it
   b->bID = next_id;
   next_id++; // better id management later...
@@ -219,8 +219,12 @@ int _add_barrier_node(struct barrier_struct* b)
 {
   struct barrier_node *tmp;
   // makes sure the list is initialized
+  printk(KERN_ERR "If first barrier, we INIT\n");
   if (barrier_list == NULL)
-    INIT_LIST_HEAD( barrier_list );
+    {
+      INIT_LIST_HEAD( barrier_list );
+      printk(KERN_ERR "INIT done, success\n");
+    }
   tmp= (struct barrier_node *)kmalloc(sizeof(struct barrier_node),GFP_KERNEL);
   if (NULL == tmp) {return -ENOMEM;}
   // copy b to tmp... deep or shallow copy? shallow
