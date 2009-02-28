@@ -62,6 +62,7 @@ asmlinkage int sys_barriercreate(int num)
   // set ID, returns it
   b->bID = next_id;
   next_id++; // better id management later...
+  printk(KERN_ERR "Created a barrier with ID=%i\n",b->bID);
   return b->bID;
 }
 
