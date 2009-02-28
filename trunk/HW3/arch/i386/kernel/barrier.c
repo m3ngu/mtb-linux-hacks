@@ -110,7 +110,7 @@ asmlinkage int sys_barrierwait(int barrierID)
      check if it exist but was destroyed, error !!!!!!!!
   */
   // lock barrier
-  spin_lock( b->spin_lock );
+  spin_lock( &(b->spin_lock) );
   // update the counter of people waiting
   b->waiting_count++;
   if (b->waiting_count == b->initial_count) // all processes are here
