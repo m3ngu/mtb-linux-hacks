@@ -12,7 +12,7 @@
 #include "sthread.h"
 #include "sync.h"
 
-#define STHREAD_DEBUG
+//#define STHREAD_DEBUG
 
 #ifdef STHREAD_DEBUG
 #include <stdio.h>

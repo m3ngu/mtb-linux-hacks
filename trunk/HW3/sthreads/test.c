@@ -6,6 +6,11 @@
 #include "sthread.h"
 #include "sync.h"
 
+struct sem_thread_info {
+	int thread_id;
+	sthread_sem_t *sem;
+};
+
 int threadmain(void *arg) {
   int threadno = (int)arg;
   for (;;) {
@@ -17,47 +22,55 @@ int threadmain(void *arg) {
 }
 
 int threadsem(void *arg) {
-	sthread_sem_t *sem =  (sthread_sem_t *) arg;
-	if (sthread_sem_down(sem) )
-	puts("I got the semaphore!");
-	sleep(1);
-	puts("but I suppose I'll give it back");
+	struct sem_thread_info *info = (struct sem_thread_info *) arg;
+	int tid = info->thread_id;
+	sthread_sem_t *sem =  info->sem;
+	if ( sthread_sem_down(sem) ) fputs("wait, is that supposed to happen?", stderr);
+	fprintf(stderr, "Thread %d got the semaphore!\n", tid);
+	sleep(2);
+	fprintf(stderr, "Thread %d is returning the semaphore\n", tid);
 	sthread_sem_up(sem);
 	return 0;
 }
 
 int main(int argc, char *argv[]) {
-  sthread_t thr1, thr2, thr3, thr4;
-  
-  if (sthread_init() == -1)
-    fprintf(stderr, "%s: sthread_init: %s\n", argv[0], strerror(errno));
-if (0) {
-  if (sthread_create(&thr1, threadmain, (void *)1) == -1)
-    fprintf(stderr, "%s: sthread_create: %s\n", argv[0], strerror(errno));
-
-  if (sthread_create(&thr2, threadmain, (void *)2) == -1)
-    fprintf(stderr, "%s: sthread_create: %s\n", argv[0], strerror(errno));
-
-  sleep(1);
-  sthread_wake(thr1);
-  sleep(1);
-  sthread_wake(thr2);
-  sleep(1);
-  sthread_wake(thr1);
-  sthread_wake(thr2);
-  sleep(1);
-  }
-  sthread_sem_t sem1;
-  sthread_sem_init(&sem1,1);
-  	if (sthread_create(&thr1, threadsem, (void *) &sem1) == -1)
-		fprintf(stderr, "%s: sthread_create: %s\n", argv[0], strerror(errno));  
-	if (sthread_create(&thr2, threadsem, (void *) &sem1) == -1)
-		fprintf(stderr, "%s: sthread_create: %s\n", argv[0], strerror(errno));  
-	if (sthread_create(&thr3, threadsem, (void *) &sem1) == -1)
+	sthread_t thr1, thr2, thr3, thr4;
+	sthread_sem_t sem1;
+	struct sem_thread_info 
+		info1 = { .thread_id = 1, .sem = &sem1 },
+		info2 = { .thread_id = 2, .sem = &sem1 },
+		info3 = { .thread_id = 3, .sem = &sem1 },
+		info4 = { .thread_id = 4, .sem = &sem1 };
+	if (sthread_init() == -1)
+		fprintf(stderr, "%s: sthread_init: %s\n", argv[0], strerror(errno));
+	if (0) {
+		if (sthread_create(&thr1, threadmain, (void *)1) == -1)
 		fprintf(stderr, "%s: sthread_create: %s\n", argv[0], strerror(errno));
-    if (sthread_create(&thr4, threadsem, (void *) &sem1) == -1)
+		
+		if (sthread_create(&thr2, threadmain, (void *)2) == -1)
+		fprintf(stderr, "%s: sthread_create: %s\n", argv[0], strerror(errno));
+		
+		sleep(1);
+		sthread_wake(thr1);
+		sleep(1);
+		sthread_wake(thr2);
+		sleep(1);
+		sthread_wake(thr1);
+		sthread_wake(thr2);
+		sleep(1);
+	}
+
+	sthread_sem_init(&sem1,2);
+  	if (sthread_create(&thr1, threadsem, (void *) &info1) == -1)
+		fprintf(stderr, "%s: sthread_create: %s\n", argv[0], strerror(errno)); 
+	sleep(1);
+	if (sthread_create(&thr2, threadsem, (void *) &info2) == -1)
+		fprintf(stderr, "%s: sthread_create: %s\n", argv[0], strerror(errno));  
+	if (sthread_create(&thr3, threadsem, (void *) &info3) == -1)
+		fprintf(stderr, "%s: sthread_create: %s\n", argv[0], strerror(errno));
+    if (sthread_create(&thr4, threadsem, (void *) &info4) == -1)
 		fprintf(stderr, "%s: sthread_create: %s\n", argv[0], strerror(errno));
 
 	sleep(10);
-  return 0;
+	return 0;
 }
