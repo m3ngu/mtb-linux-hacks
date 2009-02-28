@@ -120,7 +120,7 @@ asmlinkage int sys_barrierwait(int barrierID)
       // reset waiting_count
       b->waiting_count = 0;
       // release lock
-      spin_unlock( b->spin_lock );
+      spin_unlock( &(b->spin_lock) );
       // go
     }
   else // get in queue and wait
@@ -131,7 +131,7 @@ asmlinkage int sys_barrierwait(int barrierID)
 	{ 
 	  prepare_to_wait( b->queue , &wait, TASK_INTERRUPTIBLE);
 	  // release lock
-	  spin_unlock( b->spin_lock );
+	  spin_unlock( &(b->spin_lock) );
 	  // go to sleep
 	  if (1) // do we need a  condition? head of the queue?
 	    schedule();
@@ -141,7 +141,7 @@ asmlinkage int sys_barrierwait(int barrierID)
       if (b->destroyed == 1)
 	return_value = -1;
       //lock barrier
-      spin_lock( b->spin_lock );
+      spin_lock( &(b->spin_lock) );
       //decrement waiting_count
       b->waiting_count--;
       //if waiting count is now 0, destroy/clean up the barrier
@@ -152,7 +152,7 @@ asmlinkage int sys_barrierwait(int barrierID)
 	    */
 	  }
       //unlock barrier
-      spin_unlock( b->spin_lock );
+      spin_unlock( &(b->spin_lock) );
     }
 
   // return the return value
