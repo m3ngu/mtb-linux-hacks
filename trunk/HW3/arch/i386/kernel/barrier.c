@@ -13,7 +13,6 @@
 #include <linux/wait.h>
 #include <linux/barrier.h>
 #include <linux/spinlock.h>
-#include <stdlib.h>
 
 
 /* necessary globals: */
