@@ -17,8 +17,11 @@
 #ifdef STHREAD_DEBUG
 #include <stdio.h>
 #define DEBUG(s) fprintf(stderr,"%s\n",s)
+#define SILLY(args)	(stderr, args)
+#define DEBUGF(args) fprintf SILLY(args)
 #else
 #define DEBUG(s)
+#define DEBUGF
 #endif
 
 struct sthread_thread_queue {
@@ -53,9 +56,16 @@ sthread_queue_t *_make_queue_elem();
 int sthread_sem_init(sthread_sem_t *sem, int count)
 {
 	if ( 0 >= count ) return -1; /* invalid count */
-	struct sthread_sem_struct s = _sem_init(count);
-	s.nextqtail = &(s.queuehead);
-	*sem = s;
+	sthread_sem_t tmp = _sem_init(count);
+	DEBUG("In init_sem");
+	*sem  = tmp;
+	sem->nextqtail = &(sem->queuehead);
+#ifdef STHREAD_DEBUG
+	fprintf(stderr, "sem->head is %p\n", sem->queuehead);
+	fprintf(stderr, "&sem->head is %p\n", &(sem->queuehead));
+	fprintf(stderr, "sem->nextqtail is %p\n", sem->nextqtail);
+	fprintf(stderr, "*(sem->nextqtail) is %p\n", *(sem->nextqtail));
+#endif
 	return 0;
 	/*
 		initialize semaphore to count
@@ -102,9 +112,27 @@ int sthread_sem_down(sthread_sem_t *sem)
 		DEBUG("Semaphore freed up while allocating queue element");
 		return 0;
 	}
+	DEBUG("Enqueueing self");
+#ifdef STHREAD_DEBUG
+	fprintf(stderr, "Queue stuff: q is %p \n", q);
+	fprintf(stderr, "sem->head is %p\n", sem->queuehead);
+	fprintf(stderr, "&sem->head is %p\n", &(sem->queuehead));
+	fprintf(stderr, "sem->nextqtail is %p\n", sem->nextqtail);
+	fprintf(stderr, "*(sem->nextqtail) is %p\n", *(sem->nextqtail));
+#endif
 
 	*(sem->nextqtail) = q;	/* enqueue self */
 	sem->nextqtail = &(q->next);
+
+#ifdef STHREAD_DEBUG
+	fprintf(stderr, "Post-enqueue stuff: q is %p \n", q);
+	fprintf(stderr, "sem->head is %p\n", sem->queuehead);
+	fprintf(stderr, "&sem->head is %p\n", &(sem->queuehead));
+	fprintf(stderr, "sem->nextqtail is %p\n", sem->nextqtail);
+	fprintf(stderr, "*(sem->nextqtail) is %p\n", *(sem->nextqtail));
+
+#endif
+
 
 	for (;;) {
 		_spin_unlock(sem);	/* EXIT CRIT */
@@ -121,12 +149,19 @@ int sthread_sem_down(sthread_sem_t *sem)
 	/* we hold the lock now, so just do the standard manipulations */
 	--sem->semaphore;
 	/* dequeue self */
+	DEBUG("Dequeueing self");
 	sem->queuehead = sem->queuehead->next; 
 	if ( NULL == sem->queuehead ) {
 		sem->nextqtail = &(sem->queuehead);
 	} else { /* ( NULL != sem->queuehead ) */
 		sthread_wake(sem->queuehead->thread);
 	}
+#ifdef STHREAD_DEBUG
+	fprintf(stderr, "sem->head is %p\n", sem->queuehead);
+	fprintf(stderr, "&sem->head is %p\n", &(sem->queuehead));
+	fprintf(stderr, "sem->nextqtail is %p\n", sem->nextqtail);
+	fprintf(stderr, "*(sem->nextqtail) is %p\n", *(sem->nextqtail));
+#endif
 	_spin_unlock(sem); /* EXIT */
 	free(q);
 	return 0;
@@ -201,6 +236,8 @@ int sthread_sem_up(sthread_sem_t *sem)
 	if ( NULL != sem->queuehead ) {
 		DEBUG("found waiters: waking first");
 		sthread_wake(sem->queuehead->thread);
+	} else {
+		DEBUG("Found no waiters");
 	}
 	_spin_unlock(sem);
 	DEBUG("lock released: leaving sem_up");
