@@ -101,10 +101,10 @@ asmlinkage int sys_barrierdestroy(int barrierID)
       return_value = - b->waiting_count;
     }
   // destroy the struct, can we sleep here?
-  kfree(b,GFP_KERNEL);
+  kfree(b);
   // remove and delete node
   list_del( &(bn->list) );
-  kfree(bn,GFP_KERNEL);
+  kfree(bn);
   /*
    * What happens if the list is now empty???? pointer to NULL?
    */
@@ -122,9 +122,9 @@ asmlinkage int sys_barrierwait(int barrierID)
   // check ID validity
   if (barrierID < 0) {return -EINVAL;}
   // find the barrier
-  return_value = _get_barrier( b , barrierID );
-  if (return_value < 0)
-    return return_value;
+  b = _get_barrier( barrierID );
+  if (b == NULL)
+    return -1;
   /* 
      check if it exist but was destroyed, error !!!!!!!!
   */
@@ -209,7 +209,7 @@ struct barrier_struct* _get_barrier(int barrierID)
 {
   struct barrier_node *bn;
   int return_value = 0;
-  bn = _get_barrier_node(barrier_id);
+  bn = _get_barrier_node(barrierID);
   if (bn == NULL)
     return NULL;
   return bn->barrier;
