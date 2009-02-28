@@ -145,7 +145,7 @@ asmlinkage int sys_barrierwait(int barrierID)
       //decrement waiting_count
       b->waiting_count--;
       //if waiting count is now 0, destroy/clean up the barrier
-      if (b->waiting_count == 0
+      if (b->waiting_count == 0)
 	  {
 	    /*
 	      cleanup
