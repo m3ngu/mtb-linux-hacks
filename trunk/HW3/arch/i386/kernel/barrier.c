@@ -56,9 +56,9 @@ asmlinkage int sys_barriercreate(int num)
   init_waitqueue_head( b->queue );
   // CHECKS ERROR
   // add barrier to the list
-  err = _add_barrier_node(b);
-  if (err < 0)
-    return -1;
+  //err = _add_barrier_node(b);
+  //if (err < 0)
+  //  return -1;
   // set ID, returns it
   b->bID = next_id;
   next_id++; // better id management later...
