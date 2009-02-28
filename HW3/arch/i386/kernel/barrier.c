@@ -36,7 +36,9 @@ struct barrier_node {
 // actual list
 static struct barrier_node *barrier_list;
 
-
+// spinlock helpers
+#define _spin_lock(s) 	while (test_and_set( &((s)->spin_lock))) { ; /* spin */}
+#define _spin_unlock(s) ( (s)->spin_lock = 0 )
 
 
 /**
@@ -44,6 +46,7 @@ static struct barrier_node *barrier_list;
  */
 asmlinkage int sys_barriercreate(int num)
 {
+  int err = 0;
   // check input
   if(num < 1) {return -EINVAL;}
   // create barrier, allocate memory
@@ -55,9 +58,12 @@ asmlinkage int sys_barriercreate(int num)
   b->waiting_count = 0;
   // init wait queue head
   init_waitqueue_head( b->queue );
+  // CHECKS ERROR
   // add barrier to the list
-  _add_barrier_node(b);
-  // checks errors....
+  err = _add_barrier_node(b);
+  if (err < 0)
+    return -1;
+  // set ID, returns it
   b->bID = next_id;
   next_id++; // better id management later...
   return b->bID;
@@ -68,6 +74,7 @@ asmlinkage int sys_barriercreate(int num)
  */
 asmlinkage int sys_barrierdestroy(int barrierID)
 {
+  struct barrier_struct *b;
   /*
     find the barrier with ID, make sure it exists
     lock barrier
@@ -87,32 +94,64 @@ asmlinkage int sys_barrierdestroy(int barrierID)
  */
 asmlinkage int sys_barrierwait(int barrierID)
 {
-  /*
-  	set return value to 0
-    find the barrier with the proper ID (error if doesn't exists)
-    	also error if it's been destroyed but not cleaned up
-    lock barrier
-	waiting_count++
-	if waiting_count == initial_count
-	   wake up every one
-	   clear queue
-	   waiting_count = 0
-	   release lock
-	   go
-    else
-       get in queue
-       release lock
-       wait
-       if barrier is marked destroyed
-       		set return value to -1
-       		lock barrier 
-       		decrement waiting_count
-       		if waiting count is now 0, destroy/clean up the barrier
-       		unlock barrier
-
-    return the return value
+  int return_value = 0;
+  struct barrier_struct *b;
+  // check ID validity
+  if (barrierID < 0) {return -EINVAL;}
+  // find the barrier
+  return_value = _get_barrier( b , barrierID );
+  if (return_value < 0)
+    return return_value;
+  /* 
+     check if it exist but was destroyed, error !!!!!!!!
   */
-  return -888888888;
+  // lock barrier
+  _spin_lock(b->spin_lock);
+  // update the counter of people waiting
+  b->waiting_count++;
+  if (b->waiting_count == b->initial_count) // all processes are here
+    {
+      // wake up everyone
+      wake_up_all(b->queue);
+      // reset waiting_count
+      b->waiting_count = 0;
+      // release lock
+      _spin_unlock(b->spin_lock);
+      // go
+    }
+  else // get in queue and wait
+    {
+      //get in queue
+      DEFINE_WAIT(wait);
+      while (1) { // do we need a  condition? head of the queue?
+        prepare_to_wait(&(b->queue), &wait, TASK_INTERRUPTIBLE);
+	// release lock
+	_spin_unlock(b->spin_lock);
+	// go to sleep
+	if (1) // do we need a  condition? head of the queue?
+	    schedule();
+        finish_wait(&queue, &wait)
+      }
+      //if barrier is marked destroyed, set return to -1
+      if (b->destroyed == 1)
+	return_value = -1;
+      //lock barrier
+      _spin_lock(b->spin_lock);
+      //decrement waiting_count
+      b->waiting_count--;
+      //if waiting count is now 0, destroy/clean up the barrier
+      if (b->waiting_count == 0
+	  {
+	    /*
+	      cleanup
+	    */
+	  }
+      //unlock barrier
+      _spin_unlock(b->spin_lock);
+    }
+
+  // return the return value
+  return return_value;
 }
 
 
@@ -136,7 +175,6 @@ int _get_barrier(struct barrier_struct* b, int barrierID)
 	return 0;
       }
   }
-  // we should set a particular ERROR here!!!!!!!
   return -1;
 }
 
@@ -152,11 +190,12 @@ int _add_barrier_node(struct barrier_struct* b)
   if (barrier_list == NULL)
     INIT_LIST_HEAD( &(barrier_list->list) );
   tmp= (struct barrier_node *)kmalloc(sizeof(struct barrier_node),GFP_KERNEL);
-  // should check for kmalloc error here!!!!!!!!!
+  if (NULL == tmp) {return -ENOMEM;}
   // copy b to tmp... deep or shallow copy? shallow
   tmp->barrier = b;
   // add tmp node to the global list
   list_add( &(tmp->list), &(barrier_list->list) );
+  // DOES LIST_ADD RETURNS ERROR?
   // if we're here, everything should have worked
   return 0;
 }
