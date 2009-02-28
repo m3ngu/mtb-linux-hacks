@@ -12,6 +12,7 @@
 #include <linux/sched.h>
 #include <linux/wait.h>
 #include <linux/barrier.h>
+#include <linux/spinlock.h>
 #include <stdlib.h>
 
 
@@ -38,8 +39,8 @@ struct barrier_node {
 static struct barrier_node *barrier_list = NULL;
 
 // spinlock helpers
-#define _spin_lock(b) 	while (test_and_set( &((b)->spin_lock))) { ; /* spin */}
-#define _spin_unlock(b) ( (b)->spin_lock = 0 )
+//#define _spin_lock(b) 	while (test_and_set( b->spin_lock))) { ; /* spin */}
+//#define _spin_unlock(b) ( b->spin_lock = 0 )
 
 
 /**
@@ -54,9 +55,10 @@ asmlinkage int sys_barriercreate(int num)
   struct barrier_struct *b;
   b = (struct barrier_struct *)kmalloc(sizeof(struct barrier_struct),GFP_KERNEL);
   if (NULL == b) {return -ENOMEM;}
-  // init fields
+  // init fields and spin_lock
   b->initial_count = num;
   b->waiting_count = 0;
+  spin_lock_init( b->spin_lock );
   // init wait queue head
   init_waitqueue_head( b->queue );
   // CHECKS ERROR
@@ -108,7 +110,7 @@ asmlinkage int sys_barrierwait(int barrierID)
      check if it exist but was destroyed, error !!!!!!!!
   */
   // lock barrier
-  _spin_lock(b);
+  spin_lock( b->spin_lock );
   // update the counter of people waiting
   b->waiting_count++;
   if (b->waiting_count == b->initial_count) // all processes are here
@@ -118,7 +120,7 @@ asmlinkage int sys_barrierwait(int barrierID)
       // reset waiting_count
       b->waiting_count = 0;
       // release lock
-      _spin_unlock(b);
+      spin_unlock( b->spin_lock );
       // go
     }
   else // get in queue and wait
@@ -129,17 +131,17 @@ asmlinkage int sys_barrierwait(int barrierID)
 	{ 
 	  prepare_to_wait( b->queue , &wait, TASK_INTERRUPTIBLE);
 	  // release lock
-	  _spin_unlock(b);
+	  spin_unlock( b->spin_lock );
 	  // go to sleep
 	  if (1) // do we need a  condition? head of the queue?
 	    schedule();
-	  finish_wait( b->queue , &wait)
+	  finish_wait( b->queue , &wait);
 	}
       //if barrier is marked destroyed, set return to -1
       if (b->destroyed == 1)
 	return_value = -1;
       //lock barrier
-      _spin_lock(b);
+      spin_lock( b->spin_lock );
       //decrement waiting_count
       b->waiting_count--;
       //if waiting count is now 0, destroy/clean up the barrier
@@ -150,7 +152,7 @@ asmlinkage int sys_barrierwait(int barrierID)
 	    */
 	  }
       //unlock barrier
-      _spin_unlock(b);
+      spin_unlock( b->spin_lock );
     }
 
   // return the return value
