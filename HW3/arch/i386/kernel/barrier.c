@@ -58,7 +58,7 @@ asmlinkage int sys_barriercreate(int num)
   // init fields and spin_lock
   b->initial_count = num;
   b->waiting_count = 0;
-  spin_lock_init( b->spin_lock );
+  spin_lock_init( &(b->spin_lock) );
   // init wait queue head
   init_waitqueue_head( b->queue );
   // CHECKS ERROR
