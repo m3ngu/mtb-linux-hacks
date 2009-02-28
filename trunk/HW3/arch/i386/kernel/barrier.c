@@ -110,18 +110,18 @@ asmlinkage int sys_barrierdestroy(int barrierID)
  */
 asmlinkage int sys_barrierwait(int barrierID)
 {
-  int return_value = 0;
+/*  int return_value = 0;
   struct barrier_struct *b;
   // check ID validity
   if (barrierID < 0) {return -EINVAL;}
   // find the barrier
-  b = _get_barrier( barrierID );
-  if (b == NULL)
-    return -1;
-  /* 
+  //b = _get_barrier( barrierID );
+  //if (b == NULL)
+  //  return -1;
+*/  /* 
      check if it exist but was destroyed, error !!!!!!!!
   */
-  // lock barrier
+/*  // lock barrier
   spin_lock( &(b->spin_lock) );
   // update the counter of people waiting
   b->waiting_count++;
@@ -159,16 +159,17 @@ asmlinkage int sys_barrierwait(int barrierID)
       //if waiting count is now 0, destroy/clean up the barrier
       if (b->waiting_count == 0)
 	  {
-	    /*
+*/	    /*
 	      cleanup
 	    */
-	  }
+/*	  }
       //unlock barrier
       spin_unlock( &(b->spin_lock) );
     }
 
   // return the return value
-  return return_value;
+  return return_value;*/
+	return -1;
 }
 
 /**
@@ -200,14 +201,12 @@ struct barrier_node* _get_barrier_node(int barrierID)
  */
 struct barrier_struct* _get_barrier(int barrierID)
 {
-  /* bug somewhere here
-  struct barrier_node *bn;
+/*  struct barrier_node *bn;
   bn = _get_barrier_node(barrierID);
   if (bn == NULL)
     return NULL;
-  return bn->barrier;
-  */
-  return NULL;
+  return bn->barrier;*/
+	return NULL;
 }
 
 
