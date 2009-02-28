@@ -102,7 +102,9 @@ asmlinkage int sys_barrierdestroy(int barrierID)
     }
   // destroy the struct, can we sleep here?
   kfree(b);
-  // remove and delete node
+  // remove and delete node, if it was the last set list to NULL
+  if ( list_is_last( &(bn->list), &(barrier_list->list) ) )
+    list_del_init( &(barrier_list->list) );
   list_del( &(bn->list) );
   kfree(bn);
   /*
