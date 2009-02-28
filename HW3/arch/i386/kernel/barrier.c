@@ -35,7 +35,7 @@ struct barrier_node {
   struct barrier_struct *barrier;
 };
 // actual list
-static struct barrier_node *barrier_list;
+static struct barrier_node *barrier_list = NULL;
 
 // spinlock helpers
 #define _spin_lock(b) 	while (test_and_set( &((b)->spin_lock))) { ; /* spin */}
