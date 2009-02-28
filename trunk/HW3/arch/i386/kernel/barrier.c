@@ -200,11 +200,14 @@ struct barrier_node* _get_barrier_node(int barrierID)
  */
 struct barrier_struct* _get_barrier(int barrierID)
 {
+  /* bug somewhere here
   struct barrier_node *bn;
   bn = _get_barrier_node(barrierID);
   if (bn == NULL)
     return NULL;
   return bn->barrier;
+  */
+  return NULL;
 }
 
 
