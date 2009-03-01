@@ -1,3 +1,6 @@
+
+
+
 /* barrier.c
 	Implementation of barrier synchronization primitive for Linux 2.6.11.12
 	2/25/2009
@@ -218,8 +221,12 @@ struct barrier_struct* _get_barrier(int barrierID)
 int _add_barrier_node(struct barrier_struct* b)
 {
   struct barrier_node *tmp;
+  // check if barrier is not NULL
+  if (b == NULL)
+    return -EINVAL;
   // makes sure the list is initialized
   printk(KERN_ERR "If first barrier, we INIT\n");
+  return -1;
   if (barrier_list == NULL)
     {
       INIT_LIST_HEAD( barrier_list );
