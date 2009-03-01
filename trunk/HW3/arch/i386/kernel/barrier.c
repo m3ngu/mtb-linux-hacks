@@ -49,7 +49,7 @@ asmlinkage int sys_barriercreate(int num)
   // check input
   if(num < 1) {return -EINVAL;}
   // create barrier, allocate memory
-  struct barrier_struct *b;
+  struct barrier_struct *b = NULL;
   b = (struct barrier_struct *)kmalloc(sizeof(struct barrier_struct),GFP_KERNEL);
   if (NULL == b) {return -ENOMEM;}
   // init fields and spin_lock
@@ -222,7 +222,7 @@ struct barrier_struct* _get_barrier(int barrierID)
  */
 int _add_barrier_node(struct barrier_struct* b)
 {
-  struct barrier_node *tmp;
+  struct barrier_node *tmp = NULL;
   // check if barrier is not NULL
   if (b == NULL)
     return -EINVAL;
