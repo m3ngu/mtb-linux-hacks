@@ -18,18 +18,12 @@ _syscall1(int, barrierwait, 	int, id);
 
 
 int dummyfunction(void *arg) {
-  int id = (int) arg;
-  int pid = fork();
-  if (pid != 0)
-    return 0;
-  else {
-    printf("dummy function num. %i created\n",id);
-    // assumes that barrier 2 exists
-    printf("barrierwait output=%i\n",barrierwait(2));
-    printf("dummy function num. %i terminates\n",id);
-    return 0;
-  }
-  return 4321;
+	int id = (int)arg;
+	printf("dummy function num. %i created\n",id);
+	// assumes that barrier 2 exists
+	printf("barrierwait output=%i\n",barrierwait(2));
+	printf("dummy function num. %i terminates\n",id);
+	return 0;
 }
 
 
@@ -75,6 +69,18 @@ int main() {
 	perror("[1a]");
 	*/
 
+	int barrier2 = barriercreate(10);
+	int barrier3 = barriercreate(20);
+	int barrier4 = barriercreate(30);
+	
+	int ret = barrierdestroy(barrier3);
+	ret = barrierdestroy(barrier2);
+	ret = barrierdestroy(barrier4);
+	
+	puts("[1b]: Calling barrierdestroy with id=-1");	
+	ret = barrierdestroy(-1);
+	perror("[1b]");
+	
 	/*
 	fputs("Waiting for single-process barrier...", stderr);
 	if ( barrierwait(barrier1) ) perror("inexplicable failure")
