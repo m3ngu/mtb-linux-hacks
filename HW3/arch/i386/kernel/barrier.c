@@ -46,10 +46,10 @@ static struct list_head *barrier_list = NULL;
 asmlinkage int sys_barriercreate(int num)
 {
   int err = 0;
+  struct barrier_struct *b = NULL;
   // check input
   if(num < 1) {return -EINVAL;}
   // create barrier, allocate memory
-  struct barrier_struct *b = NULL;
   b = (struct barrier_struct *)kmalloc(sizeof(struct barrier_struct),GFP_KERNEL);
   if (NULL == b) {return -ENOMEM;}
   // init fields and spin_lock
@@ -62,7 +62,10 @@ asmlinkage int sys_barriercreate(int num)
   // add barrier to the list
   err = _add_barrier_node(b);
   if (err < 0)
-    return -1;
+    {
+      printk(KERN_INFO "could not add barrier to list, return -1\n");
+      return -1;
+    }
   // set ID, returns it
   b->bID = next_id;
   next_id++; // better id management later...
