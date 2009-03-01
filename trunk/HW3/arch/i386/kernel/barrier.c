@@ -1,6 +1,7 @@
 
 
 
+
 /* barrier.c
 	Implementation of barrier synchronization primitive for Linux 2.6.11.12
 	2/25/2009
@@ -59,13 +60,14 @@ asmlinkage int sys_barriercreate(int num)
   init_waitqueue_head( b->queue );
   // CHECKS ERROR
   // add barrier to the list
-  //err = _add_barrier_node(b);
-  //if (err < 0)
-  //  return -1;
+  err = _add_barrier_node(b);
+  if (err < 0)
+    return -1;
   // set ID, returns it
   b->bID = next_id;
   next_id++; // better id management later...
-  printk(KERN_ERR "Created a barrier with ID=%i\n",b->bID);
+  printk(KERN_INFO "Created a barrier with ID=%i\n",b->bID);
+  printk(KERN_INFO "next id is now %i\n",next_id);
   return b->bID;
 }
 
@@ -225,19 +227,23 @@ int _add_barrier_node(struct barrier_struct* b)
   if (b == NULL)
     return -EINVAL;
   // makes sure the list is initialized
-  printk(KERN_ERR "If first barrier, we INIT\n");
-  return -1;
+  printk(KERN_INFO "If first barrier, we INIT\n");
   if (barrier_list == NULL)
     {
+      barrier_list = (struct list_head *)kmalloc(sizeof(struct list_head),GFP_KERNEL);
+      if (NULL == barrier_list) {return -ENOMEM;}
       INIT_LIST_HEAD( barrier_list );
-      printk(KERN_ERR "INIT done, success\n");
+      printk(KERN_INFO "INIT done, success\n");
     }
+  printk(KERN_INFO "it wasn't the first barrier\n");
   tmp= (struct barrier_node *)kmalloc(sizeof(struct barrier_node),GFP_KERNEL);
   if (NULL == tmp) {return -ENOMEM;}
   // copy b to tmp... deep or shallow copy? shallow
   tmp->barrier = b;
   // add tmp node to the global list
+  printk(KERN_INFO "we add the new barrir to the list...");
   list_add( &(tmp->list), barrier_list );
+  printk(KERN_INFO "done\n");
   // DOES LIST_ADD RETURNS ERROR?
   // if we're here, everything should have worked
   return 0;
