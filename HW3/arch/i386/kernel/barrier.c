@@ -76,19 +76,32 @@ asmlinkage int sys_barriercreate(int num)
 
 asmlinkage int sys_barrierdestroy(int barrierID)
 {
-  // speial case barrierID = -1
-  // destroy everythign :D
-  int destroyall_return = 0;
-  if (barrierID == -1) {
-    while(!list_empty(&barrier_list)){
-      destroyall_return += sys_barrierdestroy(barrier_list.next->barrier->bID);
-    }
-    next_id = 1;
-    return destroyall_return;
-  }
-
-
-	// check ID validity
+	// speial case barrierID = -1
+	// destroy everythign :D
+	
+	int destroyall_return = 0;
+	
+	// TODO: Fix Segmentation fault
+	if (barrierID == -1 /*&& !list_empty( &barrier_list )*/) {
+	
+		struct list_head *iter;
+		struct barrier_node *objPtr;
+		
+		redo:
+			__list_for_each(iter, &barrier_list) {
+				objPtr = list_entry(iter, struct barrier_node, list);
+				
+				destroyall_return += sys_barrierdestroy( objPtr->barrier->bID );
+				goto redo;
+			}
+        
+        next_id = 1;
+        
+        return destroyall_return;
+        
+	}
+  
+  	// check ID validity
 	if (barrierID < 0) {return -EINVAL;}
     
     int return_value = 0;

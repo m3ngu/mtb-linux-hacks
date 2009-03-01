@@ -29,6 +29,10 @@ int dummyfunction(void *arg) {
 
 int main() {
 
+	puts("[1b]: Calling barrierdestroy with id=-1");	
+	int ret = barrierdestroy(-1);
+	perror("[1b]");
+	
         sthread_t t1, t2, t3;
 	int barrier1;
 
@@ -59,29 +63,24 @@ int main() {
 	    return -1;
 	  }
 
-	sthread_wake(t1);
-	sthread_wake(t2);
-	sthread_wake(t3);
+	//sthread_wake(t1);
+	//sthread_wake(t2);
+	//sthread_wake(t3);
 
 	/*
 	puts("[1a]: Calling barriercreare with num=0");	
 	int barrier1 = barriercreate(0);
 	perror("[1a]");
-	*/
+	
 
 	int barrier2 = barriercreate(10);
 	int barrier3 = barriercreate(20);
 	int barrier4 = barriercreate(30);
 	
-	int ret = barrierdestroy(barrier3);
+	ret = barrierdestroy(barrier3);
 	ret = barrierdestroy(barrier2);
 	ret = barrierdestroy(barrier4);
 	
-	puts("[1b]: Calling barrierdestroy with id=-1");	
-	ret = barrierdestroy(-1);
-	perror("[1b]");
-	
-	/*
 	fputs("Waiting for single-process barrier...", stderr);
 	if ( barrierwait(barrier1) ) perror("inexplicable failure")
 	else fputs("success!\n", stderr);
