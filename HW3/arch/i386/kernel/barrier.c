@@ -32,7 +32,8 @@ struct barrier_node {
 };
 
 static LIST_HEAD(barrier_list);
-static unsigned int next_id = 1;
+//static unsigned int next_id = 1;
+static atomic_t nex_id = ATOMIC_INIT(0);
 
 /*
 struct barrier_struct* _get_barrier(int barrierID);
@@ -269,3 +270,13 @@ struct barrier_node* _get_barrier_node(int barrierID)
 	printk(KERN_INFO "Barrier %d not found!\n",barrierID);
     return NULL; // Not found
 }
+
+/**
+ * Get the next ID by incrementing next_id (using an atomic function)
+ */
+int _get_next_id()
+{
+  return atomic_inc_return( &next_id );
+}
+
+
