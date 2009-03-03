@@ -20,9 +20,11 @@
 struct barrier_struct {
 	unsigned int bID;			// barrier ID
 	spinlock_t spin_lock;		// spin lock
-	atomic_t waiting_count;		// items in queue
+	atomic_t refcount;
+	int waiting_count;		// items in queue
 	int initial_count;			// original N, or barrier size
 	wait_queue_head_t queue;	// queue
+	int barrier_iteration;
 	int destroyed;				// set to 1 if we're in the destruction function
 };
 
@@ -60,7 +62,8 @@ asmlinkage int sys_barriercreate(int num)
     }
     
     b->initial_count = num;
-    atomic_set( &b->waiting_count , num); // shouldn't this be zero?
+    // atomic_set( &b->waiting_count , num); // shouldn't this be zero?
+    b->waiting_count = 0;
     
     spin_lock_init( &b->spin_lock );
     
@@ -123,10 +126,10 @@ asmlinkage int sys_barrierdestroy(int barrierID)
 		
 		// if people in queue, wake them up, and count
 		
-		int wc = atomic_read(&objPtr->barrier->waiting_count);
+		int wc = objPtr->barrier->waiting_count;
 
 		printk(KERN_INFO "Found %d waiters\n", wc);
-		if (wc == objPtr->barrier->initial_count)
+		if (wc != 0)
 		{
 			// wake up everyone
 			wake_up_all( &objPtr->barrier->queue );
@@ -158,23 +161,28 @@ asmlinkage int sys_barrierwait(int barrierID)
     if (NULL == objPtr) { /* not found */
     	return -EINVAL;
     } else {
-		
-		unsigned long flags; // has some value? 0?
+		int my_iteration;
+		unsigned long flags; // overwritten by macro
 		
 		// lock barrier
-		spin_lock_irqsave( &objPtr->barrier->spin_lock , flags);
-	
+		struct barrier_struct *b = objPtr->barrier;
+		spin_lock_irqsave( &b->spin_lock , flags);
+		my_iteration = b->barrier_iteration;
 		// update the counter of people waiting
-		if (atomic_dec_and_test( &objPtr->barrier->waiting_count )) // all processes are here (waiting_count=0)
+		if (++b->waiting_count == b->initial_count ) // barrier full
+		//if (atomic_dec_and_test( &objPtr->barrier->waiting_count )) // all processes are here (waiting_count=0)
 		{
 			// wake up everyone
+			b->barrier_iteration++;
+			b->waiting_count = 0;
 			wake_up_all( &objPtr->barrier->queue);
 			
 			// add 1 to waiting count (waiting_count == initial_count) means everyone has left
-			atomic_inc( &objPtr->barrier->waiting_count );
-			
+
+			// atomic_inc( &objPtr->barrier->waiting_count );
+			// XXX does this need to check overflow?
 			// release lock
-			spin_unlock_irqrestore( &objPtr->barrier->spin_lock , flags);
+			spin_unlock_irqrestore( &b->spin_lock , flags);
 			
 			// go
 			printk(KERN_INFO "We woke everybody up\n");
@@ -183,47 +191,42 @@ asmlinkage int sys_barrierwait(int barrierID)
 		else // get in queue and wait
 		{
 			//get in queue
+			// release lock (do this before prepare_to_wait?)
+			spin_unlock_irqrestore( &b->spin_lock , flags);
+
 			printk(KERN_INFO "We get in queue\n");
 		
 			DEFINE_WAIT(wait);
 		
 			printk(KERN_INFO "Prepare_to_wait\n");
-			prepare_to_wait( &objPtr->barrier->queue , &wait, TASK_INTERRUPTIBLE);
+			prepare_to_wait( &b->queue , &wait, TASK_INTERRUPTIBLE );
 
-			// release lock
-			spin_unlock_irqrestore( &objPtr->barrier->spin_lock , flags);
 			
 			// go to sleep
-			if (1) // do we need a Êcondition? head of the queue?
+			while (b->barrier_iteration == my_iteration && 0 == b->destroyed) // still the barrier we were waiting for
 				schedule();
 
 			printk(KERN_INFO "We just woke up\n");
-
-			//if barrier is marked destroyed, set return to -1
-			if (objPtr->barrier->destroyed == 1)
-			{
-				printk(KERN_INFO "Barrier in destroyed mode?\n");
-				return_value = -1214;
-			}
-
-			//lock barrier
-			spin_lock_irqsave( &objPtr->barrier->spin_lock , flags);
-			
 			// get out of the list
 			finish_wait( &objPtr->barrier->queue , &wait);
-			
-			//increment waiting_count
-			// but really, no--why?
-			atomic_inc( &objPtr->barrier->waiting_count );
-			
-			//if waiting count is now 0, destroy/clean up the barrier
-			/*
-			if (atomic_sub_and_test())
-			{
-				// cleanup
-			printk(KERN_INFO "we should cleanup barrier here and now\n");
+
+			//lock barrier
+			spin_lock_irqsave( &b->spin_lock , flags);
+			if (b->barrier_iteration == my_iteration) {
+				return_value = -1;
 			}
-			*/
+			//if barrier is marked destroyed, set return to -1
+			if ( atomic_dec_and_test( &b->refcount ) ) {
+				if (b->destroyed == 1)
+				{
+					printk(KERN_INFO "Barrier in destroyed mode?\n");
+
+					printk(KERN_INFO 
+						"refcount at zero: destroying barrier %d\n",
+						b->bID);
+					// and then actually do it
+				}
+			} 
 			
 			//unlock barrier
 			spin_unlock_irqrestore( &objPtr->barrier->spin_lock , flags);
