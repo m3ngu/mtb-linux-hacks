@@ -3,87 +3,102 @@
 /* barrier_test.c: various test/demonstration code for kernel barriers
 	2/25/09
 */
-
 #define _REENTRANT
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
-#include "../sthreads/sthread.h"
-#include "../sthreads/sync.h"
-#include "include/asm/unistd.h"
+#include <unistd.h>
+#include <sys/wait.h>
+#include <string.h>
+#include "asm/unistd.h"
 
-_syscall1(int, barriercreate, 	int, num);
-_syscall1(int, barrierdestroy, 	int, id);
-_syscall1(int, barrierwait, 	int, id);
+_syscall1(int, barriercreate, 	int, num)
+_syscall1(int, barrierdestroy, 	int, id)
+_syscall1(int, barrierwait, 	int, id)
 
 
-int dummyfunction(void *arg) {
-	int id = (int)arg;
-	printf("dummy function num. %i created\n",id);
-	// assumes that barrier 2 exists
-	printf("barrierwait output=%i\n",barrierwait(2));
-	printf("dummy function num. %i terminates\n",id);
-	return 0;
+/* this prints the process ID, and prints to stdout, so the interleaving is happier */
+
+void better_perror(const char *s) {
+/*
+	char *errmsg = strerror(errno);
+	int pid;
+	puts("still alive...");
+	pid = getpid();
+	printf("In PID %d; %s: %s\n", pid, s, errmsg);// strerror(tmp));
+	*/
+	perror(s);
 }
 
+#define BSIZE1  4 
 
 int main() {
-
 	puts("[1b]: Calling barrierdestroy with id=-1");	
 	int ret = barrierdestroy(-1);
+	if (0 > ret) perror("Error in global destroy");
+	else printf("Destroyed barriers had %d waiting processes\n", ret);
+	
 	perror("[1b]");
-	
-        sthread_t t1, t2, t3;
-	int barrier1;
 
-	// makes sure barrier 2 created
-	barrier1 = barriercreate(3);
-	barrier1 = barriercreate(3);
-	barrier1 = barriercreate(3);
+	int barrier1 = barriercreate(1);
+	int status = 0;
 	
-	// create threads
-	if (sthread_init() == -1)
-	  {
-	    fprintf(stderr,"sthread_init(): %s\n",strerror(errno));
-	    return -1;
-	  }
-	if (sthread_create(&t1,dummyfunction,(void*)1) == -1)
-	  {  
-	    fprintf(stderr,"thread 1 could not be created\n");
-	    return -1;
-	  }
-	if (sthread_create(&t2,dummyfunction,(void*)2) == -1)
-	  {  
-	    fprintf(stderr,"thread 2 could not be created\n");
-	    return -1;
-	  }
-	if (sthread_create(&t3,dummyfunction,(void*)3) == -1)
-	  {  
-	    fprintf(stderr,"thread 3 could not be created\n");
-	    return -1;
-	  }
+	printf("[2a]: approaching barrier %d (size 1)\n", barrier1);
+	status = barrierwait(barrier1);
+	
+	if (status) better_perror("[2a] Error waiting for barrier 1");
+	else puts("[2a] Successfully waited for nobody");
+	if (1) {
+		status = barrierdestroy(barrier1);
+		printf("Survived with status %d\n", status);
+		if (status) better_perror("[2b] failed to destroy barrier 1");
+		else puts("[2b] destroyed barrier 1 correctly");
+	} else {
+		puts("Skipping barrier destruction");
+	}
+	
+	/* 2c: barrier of four, fork off three, wait a second, and go */
+	barrier1 = barriercreate(BSIZE1);
+	if ( 0 > barrier1 ) { better_perror("[2c] failed to create barrier"); }
+	else {
+		printf("[2a]: created barrier %d (size %d)\n", barrier1, BSIZE1);
 
-	//sthread_wake(t1);
-	//sthread_wake(t2);
-	//sthread_wake(t3);
-
-	/*
-	puts("[1a]: Calling barriercreare with num=0");	
-	int barrier1 = barriercreate(0);
-	perror("[1a]");
-	
-
-	int barrier2 = barriercreate(10);
-	int barrier3 = barriercreate(20);
-	int barrier4 = barriercreate(30);
-	
-	ret = barrierdestroy(barrier3);
-	ret = barrierdestroy(barrier2);
-	ret = barrierdestroy(barrier4);
-	
-	fputs("Waiting for single-process barrier...", stderr);
-	if ( barrierwait(barrier1) ) perror("inexplicable failure")
-	else fputs("success!\n", stderr);
-	*/
-	return EXIT_SUCCESS;
+		int childpids[BSIZE1 - 1];
+		for (int i = 0; i < BSIZE1 - 1; i++) {
+			int pid = fork();
+			if ( 0 > pid) { better_perror("[2c] FORK FAILED"); }
+			else if (0 != pid) {
+				printf("[2c] child %d is now waiting for the barrier\n", pid);
+				status = barrierwait(barrier1);
+				if (status) {
+					better_perror("unexpected error on wait");
+				} else {
+					printf("[2c] child %d woke up, will re-queue\n", pid);
+				}
+				status = barrierwait(barrier1);
+				if (status) {
+					better_perror("unexpected error on wait");
+				} else {
+					printf("[2c] child %d woke up and will now exit\n", pid);
+					exit(0);
+				}
+			} else {
+				childpids[i] = pid; /* store for reaping later */
+			}
+		}
+		printf("[2c]: parent will wait a second, then go to the barrier\n");
+		sleep(1);
+		status = barrierwait(barrier1);
+		if (status) {better_perror("parent found error on wait"); }
+		else { puts("[2c] parent re-queueing"); }
+		status = barrierwait(barrier1);
+		if (status) {better_perror("parent found error on 2nd wait"); }
+		else { puts("[2c] parent left barrier, reaping children"); }
+		for (int i = 0; i < BSIZE1 - 1; i++) {
+			int childstatus;
+			waitpid(childpids[i], &childstatus, 0);
+		}
+		puts("[2c] children reaped");
+	}
+	return 0;
 }
