@@ -77,32 +77,37 @@ void test1() {
 void test2_helper(void *arg) {
 	int barrier_id = (int) arg;
 	int mypid = getpid();
-	printf("[2a] child %d is approaching the barrier\n", mypid);
+	printf("[2b] child %d is approaching the barrier\n", mypid);
 	int status = barrierwait(barrier_id);
 	if ( -1 == status) {
-		printf("[2b] child %d left barrier with error\n", mypid);
+		printf("[2c] child %d left barrier with error\n", mypid);
 	} else if (0 == status) {
-		printf("[2a] child %d left barrier normally\n", mypid);
+		printf("[2b] child %d left barrier normally\n", mypid);
 	}
 }
  
 void test2() {
 	int kiddies[5];
+	puts("[2a] creating a barrier of size 3");
 	int barrier_id = barriercreate(3);
-	printf("[2a] launching 5 processes at a size-3 barrier\n");
-	_spawn_all(kiddies, test2_helper, (void *) barrier_id);
-	sleep(1);
-	printf("[2b] destroying barrier with (hopefully) 2 processes at it\n");
-	int left = barrierdestroy(barrier_id);
-	if (2 == left) {
-		printf("[2b] got back correct number of waiting processes\n");
-	} else if ( -1 == left) {
-		perror("[2b] unexpected failure");
+	if (barrier_id > 0) {
+		printf("[2b] launching 5 processes at a size-3 barrier\n");
+		_spawn_all(kiddies, test2_helper, (void *) barrier_id);
+		sleep(1);
+		printf("[2c] destroying barrier with (hopefully) 2 processes at it\n");
+		int left = barrierdestroy(barrier_id);
+		if (2 == left) {
+			printf("[2c] got back correct number of waiting processes\n");
+		} else if ( -1 == left) {
+			perror("[2c] unexpected failure");
+		} else {
+			printf("[2c] got back %d instead of 2\n", left);
+		}
+		_wait_all(kiddies);
+		printf("[2b] reaped child processes\n");
 	} else {
-		printf("[2b] got back %d instead of 2\n", left);
+		perror("[2a] barrier creation failed");
 	}
-	_wait_all(kiddies);
-	printf("[2b] reaped child processes\n");
 }
 
 /**
