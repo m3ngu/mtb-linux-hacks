@@ -21,8 +21,15 @@ _syscall1(int, barrierwait, 	int, id)
 	for (int i = 0; i < sizeof(ar)/sizeof(int); i++) { \
 		ar[i] = magic_fork(func, arg); \
 	}
-	
 
+#define _wait_all(ar) \
+	for (int i = 0; i < sizeof(ar)/sizeof(int); i++) { 	\
+		int status; 									\
+		waitpid(ar[i], &status, 0);						\
+	}
+
+	
+	
 /* this prints the process ID, and prints to stdout, so the interleaving is happier */
 
 void better_perror(const char *s) {
@@ -94,6 +101,8 @@ void test2() {
 	} else {
 		printf("[2b] got back %d instead of 2\n", left);
 	}
+	_wait_all(kiddies);
+	printf("[2b] reaped child processes\n");
 }
 
 /**
@@ -152,7 +161,7 @@ int main() {
 	int ret = barrierdestroy(-1);
 	if (0 > ret) perror("Error in global destroy");
 	else printf("Destroyed barriers had %d waiting processes\n", ret);
-	
+	test2();
 	perror("[1b]");
 
 	int barrier1 = barriercreate(1);
