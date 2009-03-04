@@ -105,12 +105,12 @@ asmlinkage int sys_barrierdestroy(int barrierID)
 			barrierID);
 		return -EINVAL;
 	} else {
+		printk(KERN_INFO "in destroy routine for barrier %d\n", barrierID);
 		printk(KERN_INFO "deleting from list\n");
 		down(&search_lock);
 		list_del(&objPtr->list);
 		up(&search_lock);
 		// lock barrier
-		printk(KERN_INFO "in destroy routine for barrier %d\n", barrierID);
 		spin_lock_irqsave( &objPtr->barrier->spin_lock, flags );
 		
 		// set destroyed mode
