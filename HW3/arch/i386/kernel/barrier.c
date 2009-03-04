@@ -208,10 +208,14 @@ asmlinkage int sys_barrierwait(int barrierID)
 
 			
 			// go to sleep
-			while (b->barrier_iteration == my_iteration && 0 == b->destroyed) // still the barrier we were waiting for
+			while (b->barrier_iteration == my_iteration && 0 == b->destroyed) {
+				// still the barrier we were waiting for
+				printk(KERN_INFO "Process %d yielding to the scheduler\n", pid);
 				schedule();
+				printk(KERN_INFO "Process %d just woke up\n", pid);
+			}
 
-			printk(KERN_INFO "Process %d just woke up\n", pid);
+
 			// get out of the list
 			finish_wait( &objPtr->barrier->queue , &wait);
 

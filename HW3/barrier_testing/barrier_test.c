@@ -17,6 +17,11 @@ _syscall1(int, barriercreate, 	int, num)
 _syscall1(int, barrierdestroy, 	int, id)
 _syscall1(int, barrierwait, 	int, id)
 
+#define _spawn_all(ar, func, arg)  \
+	for (int i = 0; i < sizeof(ar)/sizeof(int); i++) { \
+		ar[i] = magic_fork(func, arg); \
+	}
+	
 
 /* this prints the process ID, and prints to stdout, so the interleaving is happier */
 
@@ -34,7 +39,7 @@ void better_perror(const char *s) {
 /**
  * The children calls the func(void*)
  */
-int magic_fork( void* func(void* ), void* arg )
+int magic_fork( void (*func) (void* ), void* arg )
 {
   int pid = fork();
   if (pid == 0) // child
@@ -61,9 +66,34 @@ void test1() {
  * Tests M tasks with barrier of size N, N < M
  * Then test destroy with tasks waiting
  */
+ 
+void test2_helper(void *arg) {
+	int barrier_id = (int) arg;
+	int mypid = getpid();
+	printf("[2a] child %d is approaching the barrier\n", mypid);
+	int status = barrierwait(barrier_id);
+	if ( -1 == status) {
+		printf("[2b] child %d left barrier with error\n", mypid);
+	} else if (0 == status) {
+		printf("[2a] child %d left barrier normally\n", mypid);
+	}
+}
+ 
 void test2() {
-
-
+	int kiddies[5];
+	int barrier_id = barriercreate(3);
+	printf("[2a] launching 5 processes at a size-3 barrier\n");
+	_spawn_all(kiddies, test2_helper, (void *) barrier_id);
+	sleep(1);
+	printf("[2b] destroying barrier with (hopefully) 2 processes at it\n");
+	int left = barrierdestroy(barrier_id);
+	if (2 == left) {
+		printf("[2b] got back correct number of waiting processes\n");
+	} else if ( -1 == left) {
+		perror("[2b] unexpected failure");
+	} else {
+		printf("[2b] got back %d instead of 2\n", left);
+	}
 }
 
 /**
@@ -82,7 +112,7 @@ void test4() {
 
 
 }
-
+#if 0
 
 // helper function for test 5
 void helper5(int bID) {
@@ -98,7 +128,7 @@ void helper5(int bID) {
  */
 void test5() {
   printf("[5a]: create a barrier of size 3, bid=");
-  int bID = createbarrier(3); printf("%i\n",bID);
+  int bID = barriercreate(3); printf("%i\n",bID);
   int t1 = magic_fork( helper5, void );
   int t2 = magic_fork( helper5, void );
   printf("[5b]: send wake signals to the two processes\n");
@@ -114,7 +144,7 @@ void test5() {
   printf("[5d]: test done\n");
 }
 
-
+#endif
 
 
 int main() {
