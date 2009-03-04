@@ -30,6 +30,19 @@ void better_perror(const char *s) {
 	perror(s);
 }
 
+/**
+ * The children calls the func(void*)
+ */
+int magic_fork( void* func(void* ), void* arg )
+{
+  int pid = fork();
+  if (pid == 0) // child
+    {
+      func(arg);
+    }
+  else return pid;
+}
+
 #define BSIZE1  4 
 
 
@@ -69,14 +82,25 @@ void test4() {
 }
 
 
+// helper function for test 5
+void helper5(int bID) {
+  int waitOK = barrierwait(bID);
+  return 1;
+}
+
+
 /**
  * Tests N tasks with barrier of size N+1, wake everybody,
  * they stay in queue, then we launch the N+1 task
  */
 void test5() {
+  printf("[5a]: create a barrier of size 3, bid=");
+  int bID = createbarrier(3); printf("%i\n",bID);
+  
 
 
 }
+
 
 
 
