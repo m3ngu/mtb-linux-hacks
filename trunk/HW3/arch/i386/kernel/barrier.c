@@ -39,18 +39,20 @@ static atomic_t next_id = ATOMIC_INIT(0);
 
 /* TODO: block comment */
 int _get_next_id(void);
-void _leave_barrier(struct barrier_node *, unsigned long);
+void _leave_barrier(struct barrier_node *o, unsigned long f);
 int destroyall(void);
 void display(void);
 struct barrier_node* _get_barrier_node(int barrierID);
 
 asmlinkage int sys_barriercreate(int num)
 {
+	printk(KERN_INFO "entering sys_barriercreate\n");
 	// check input
 	if(num < 1) {return -EINVAL;}
-	
+	printk(KERN_INFO "creating barrier of size %d\n", num);
 	// create barrier node, allocate memory
 	struct barrier_node *bnPtr = (struct barrier_node *)kmalloc(sizeof(struct barrier_node), GFP_KERNEL);
+
 	if (NULL == bnPtr) {return -ENOMEM;}
 	
 	// create barrier, allocate memory
@@ -60,6 +62,7 @@ asmlinkage int sys_barriercreate(int num)
 		return -ENOMEM;
 	}
 	
+	printk(KERN_INFO "memory allocated\n");
 	b->initial_count = num;
 	atomic_set( &b->refcount , 0); // shouldn't this be zero?
 	b->waiting_count = 0;
@@ -76,6 +79,8 @@ asmlinkage int sys_barriercreate(int num)
 	
 	INIT_LIST_HEAD( &bnPtr->list );
 	list_add( &bnPtr->list , &barrier_list);
+	printk(KERN_INFO "initialization complete: id is %d\n", b->bID);
+
 	
 	display();
 	
@@ -289,6 +294,9 @@ int _get_next_id()
 */
 void _leave_barrier(struct barrier_node *objPtr, unsigned long flags) {
 	int pid = current->tgid;
+	printk(KERN_INFO "process %d is leaving barrier %d\n",
+		pid, objPtr->barrier->bID
+	);
 	if (NULL == objPtr) {
 		printk(KERN_ERR "NULL list-node passed to _leave_barrier!\n");
 		return;
