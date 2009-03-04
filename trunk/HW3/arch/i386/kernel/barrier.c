@@ -100,7 +100,11 @@ asmlinkage int sys_barrierdestroy(int barrierID)
 	barrier_node_t *objPtr = _get_barrier_node(barrierID);
 	unsigned long flags;
 	
-	if (objPtr != NULL) {
+	if ( NULL == objPtr ) {
+		printk(KERN_INFO "attempting to delete nonexistent barrier %d\n",
+			barrierID);
+		return -EINVAL;
+	} else {
 		printk(KERN_INFO "deleting from list\n");
 		down(&search_lock);
 		list_del(&objPtr->list);

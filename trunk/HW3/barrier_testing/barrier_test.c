@@ -34,7 +34,7 @@ void better_perror(const char *s) {
 
 int main() {
 	puts("[1b]: Calling barrierdestroy with id=-1");	
-	int ret = 0;//barrierdestroy(-1);
+	int ret = barrierdestroy(-1);
 	if (0 > ret) perror("Error in global destroy");
 	else printf("Destroyed barriers had %d waiting processes\n", ret);
 	
@@ -99,6 +99,12 @@ int main() {
 			waitpid(childpids[i], &childstatus, 0);
 		}
 		puts("[2c] children reaped");
+		status = barrierdestroy(barrier1);
+		if (status) {puts("[2d] didn't expect that..."); }
+		else puts("Destroyed barrier cleanly");
+		status = barrierdestroy(barrier1);
+		if (status) perror("[2e] double-destroy of barrier");
+		else puts("[2e] unexpected success in double-destruction");
 	}
 	return 0;
 }
