@@ -126,13 +126,17 @@ void test4() {
 
 
 }
-#if 0
 
+
+// task counter
+static int test5_counter = 1;
 // helper function for test 5
-void helper5(int bID) {
-  printf("get in queue with barrier %i\n",bID);
-  int waitOK = barrierwait(bID);
-  printf("left barrier %i\n",bID);
+void helper5(void* arg) {
+  int id = test5_counter; test5_counter++;
+  int bID = (int) arg;
+  printf("task %i get in queue with barrier %i\n",id,bID);
+  barrierwait(bID);
+  printf("task %i left barrier %i\n",id,bID);
 }
 
 
@@ -141,27 +145,30 @@ void helper5(int bID) {
  * they stay in queue, then we launch the N+1 task
  */
 void test5() {
+  int i, status;
   printf("[5a]: create a barrier of size 3, bid=");
   int bID = barriercreate(3); printf("%i\n",bID);
-  int t1 = magic_fork( helper5, void );
-  int t2 = magic_fork( helper5, void );
+  int t1 = magic_fork( helper5, (void*) bID );
+  int t2 = magic_fork( helper5, (void*) bID );
   printf("[5b]: send wake signals to the two processes\n");
   sleep(1);
-  kill(t1,SIGCONT);
-  kill(t2,SIGCONT);
+  kill( getppid() ,SIGCONT);
+  kill( getppid() ,SIGCONT);
   sleep(1);
   printf("[5c]: send a third task to the barrier\n");
-  int t3 = magic_fork( helper5, void );
-  waitpid(t1);
-  waitpid(t2);
-  waitpid(t3);
+  int t3 = magic_fork( helper5, (void*) bID );
+  for (i = 0; i < 3; i++)
+    wait(&status);
   printf("[5d]: test done\n");
 }
 
-#endif
+
 
 
 int main() {
+
+  test5(); exit(0);
+
 	puts("[1b]: Calling barrierdestroy with id=-1");	
 	int ret = barrierdestroy(-1);
 	if (0 > ret) perror("Error in global destroy");
@@ -170,6 +177,7 @@ int main() {
 	perror("[1b]");
 
 	int barrier1 = barriercreate(1);
+	printf("barrier 1 returns: %i\n",barrier1);
 	int status = 0;
 	
 	printf("[2a]: approaching barrier %d (size 1)\n", barrier1);
