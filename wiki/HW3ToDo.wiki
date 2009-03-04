@@ -1,0 +1,8 @@
+#summary To-do items for HW3
+
+= HW3 To Do =
+
+  # Comment code
+  # Writeup a Readme
+  # Fix for sthreads
+  # Create patch and apply to a clean VM
