@@ -32,6 +32,54 @@ void better_perror(const char *s) {
 
 #define BSIZE1  4 
 
+
+
+/**
+ * Tests 1 tasks with barrier of size 1
+ */
+void test1() {
+
+
+}
+
+/**
+ * Tests M tasks with barrier of size N, N < M
+ * Then test destroy with tasks waiting
+ */
+void test2() {
+
+
+}
+
+/**
+ * Tests when we try to open multiple barriers simulatenously
+ */
+void test3() {
+
+
+}
+
+
+/**
+ * Test N tasks with barrier of size N
+ */
+void test4() {
+
+
+}
+
+
+/**
+ * Test N tasks with barrier of size N+1, wake everybody,
+ * they stay in queue, then we launch the N+1 task
+ */
+void test5() {
+
+
+}
+
+
+
 int main() {
 	puts("[1b]: Calling barrierdestroy with id=-1");	
 	int ret = barrierdestroy(-1);
