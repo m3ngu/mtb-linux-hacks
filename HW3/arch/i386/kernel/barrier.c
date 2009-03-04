@@ -186,14 +186,9 @@ asmlinkage int sys_barrierwait(int barrierID)
 			b->barrier_iteration++;
 			b->waiting_count = 0;
 			wake_up_all( &objPtr->barrier->queue);
-			
-			// add 1 to waiting count (waiting_count == initial_count) means everyone has left
 
-			// atomic_inc( &objPtr->barrier->waiting_count );
-			// XXX does this need to check overflow?
-			// release lock
-			spin_unlock_irqrestore( &b->spin_lock , flags);
-			
+			// decrement refcount and release lock
+			_leave_barrier(objPtr, flags);
 			// go
 			printk(KERN_INFO "Process %d woke everybody up\n", pid);
 			return 0;
@@ -310,7 +305,7 @@ void _leave_barrier(barrier_node_t *objPtr, unsigned long flags) {
 	}
 	barrier_t *b = objPtr->barrier;
 
-	if ( !atomic_dec_and_test( &b->refcount ) ) {
+	if ( atomic_dec_and_test( &b->refcount ) ) {
 		printk(KERN_INFO "Process %d is last to leave barrier %d\n",
 		pid, b->bID); // XXX undeclared
 		if (b->destroyed == 1)
