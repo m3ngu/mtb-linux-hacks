@@ -14,10 +14,11 @@
 #include <linux/errno.h>
 #include <linux/sched.h>
 
+typedef struct list_head list_head_t;
 /**
  * Barrier structure
  */
-struct barrier_struct {
+typedef struct barrier_struct {
 	unsigned int bID;		// barrier ID
 	spinlock_t spin_lock;		// spin lock
 	atomic_t refcount;
@@ -26,12 +27,12 @@ struct barrier_struct {
 	wait_queue_head_t queue;	// queue
 	int barrier_iteration;
 	int destroyed;			// set to 1 if we're in the destruction function
-};
+} barrier_t;
 
-struct barrier_node {
-	struct barrier_struct *barrier;
-	struct list_head list;
-};
+typedef struct barrier_node {
+	barrier_t *barrier;
+	list_head_t list;
+} barrier_node_t;
 
 static LIST_HEAD(barrier_list);
 static DECLARE_MUTEX(search_lock);
@@ -39,10 +40,10 @@ static atomic_t next_id = ATOMIC_INIT(0);
 
 /* TODO: block comment */
 int _get_next_id(void);
-void _leave_barrier(struct barrier_node *o, unsigned long f);
+void _leave_barrier(barrier_node_t *o, unsigned long f);
 int destroyall(void);
 void display(void);
-struct barrier_node* _get_barrier_node(int barrierID);
+barrier_node_t* _get_barrier_node(int barrierID);
 
 asmlinkage int sys_barriercreate(int num)
 {
@@ -51,12 +52,11 @@ asmlinkage int sys_barriercreate(int num)
 	if(num < 1) {return -EINVAL;}
 	printk(KERN_INFO "creating barrier of size %d\n", num);
 	// create barrier node, allocate memory
-	struct barrier_node *bnPtr = (struct barrier_node *)kmalloc(sizeof(struct barrier_node), GFP_KERNEL);
-
+	barrier_node_t *bnPtr = (barrier_node_t *)kmalloc(sizeof(barrier_node_t), GFP_KERNEL);
 	if (NULL == bnPtr) {return -ENOMEM;}
 	
 	// create barrier, allocate memory
-	struct barrier_struct *b = (struct barrier_struct *)kmalloc(sizeof(struct barrier_struct), GFP_KERNEL);
+	barrier_t *b = (barrier_t *)kmalloc(sizeof(barrier_t), GFP_KERNEL);
 	if (NULL == b) {
 		kfree(bnPtr);
 		return -ENOMEM;
@@ -87,24 +87,6 @@ asmlinkage int sys_barriercreate(int num)
 	return b->bID;
 }
 
-int destroyall(void) {
-	
-	int destroyall_return = 0;
-	
-	struct list_head *iter;
-	struct barrier_node *objPtr;
-	
-	redo:
-	__list_for_each(iter, &barrier_list) {
-		objPtr = list_entry(iter, struct barrier_node, list);
-		
-		destroyall_return += sys_barrierdestroy( objPtr->barrier->bID );
-		goto redo;
-	}
-	
-	return destroyall_return;
-}
-
 asmlinkage int sys_barrierdestroy(int barrierID)
 {
 	// speial case barrierID = -1
@@ -115,7 +97,7 @@ asmlinkage int sys_barrierdestroy(int barrierID)
 	if (barrierID < 0) {return -EINVAL;}
 	
 	int return_value = 0;
-	struct barrier_node *objPtr = _get_barrier_node(barrierID);
+	barrier_node_t *objPtr = _get_barrier_node(barrierID);
 	unsigned long flags;
 	
 	if (objPtr != NULL) {
@@ -150,6 +132,24 @@ asmlinkage int sys_barrierdestroy(int barrierID)
 	return return_value;
 }
 
+int destroyall(void) {
+	
+	int destroyall_return = 0;
+	
+	list_head_t *iter;
+	barrier_node_t *objPtr;
+	
+	redo:
+	__list_for_each(iter, &barrier_list) {
+		objPtr = list_entry(iter, barrier_node_t, list);
+		
+		destroyall_return += sys_barrierdestroy( objPtr->barrier->bID );
+		goto redo;
+	}
+	
+	return destroyall_return;
+}
+
 asmlinkage int sys_barrierwait(int barrierID)
 {
 	int return_value = 0;
@@ -158,7 +158,7 @@ asmlinkage int sys_barrierwait(int barrierID)
 	// check ID validity
 	if (barrierID < 0) {return -EINVAL;}
 	
-	struct barrier_node *objPtr = _get_barrier_node(barrierID);
+	barrier_node_t *objPtr = _get_barrier_node(barrierID);
 	
 	if (NULL == objPtr) { /* not found */
 		return -EINVAL;
@@ -167,7 +167,7 @@ asmlinkage int sys_barrierwait(int barrierID)
 		unsigned long flags; // overwritten by macro
 		
 		// lock barrier
-		struct barrier_struct *b = objPtr->barrier;
+		barrier_t *b = objPtr->barrier;
 		spin_lock_irqsave( &b->spin_lock , flags);
 		if (b->destroyed) {
 			/* save some time: return -1 */
@@ -232,14 +232,14 @@ asmlinkage int sys_barrierwait(int barrierID)
 
 void display(void)
 {
-	struct list_head *iter;
-	struct barrier_node *objPtr;
+	list_head_t *iter;
+	barrier_node_t *objPtr;
 	down(&search_lock);
 
 	printk(KERN_INFO "Current barrier list:\n");
 	__list_for_each(iter, &barrier_list) {
 		printk(KERN_DEBUG "Current list pointer: %p\n", iter);
-		objPtr = list_entry(iter, struct barrier_node, list);
+		objPtr = list_entry(iter, barrier_node_t, list);
 		printk(KERN_DEBUG "Current item pointer: %p\n", objPtr);
 		printk(KERN_DEBUG "id:%d|cap:%d\n"
 			, objPtr->barrier->bID
@@ -253,14 +253,14 @@ void display(void)
  * helper function, gets a barrier node that contains the barrier with a given ID
  * returns NULL if it was not found
  */
-struct barrier_node* _get_barrier_node(int barrierID)
+barrier_node_t* _get_barrier_node(int barrierID)
 {
-	struct list_head *iter;
-	struct barrier_node *objPtr = NULL;
+	list_head_t *iter;
+	barrier_node_t *objPtr = NULL;
 	down(&search_lock);
 	
 	__list_for_each(iter, &barrier_list) {
-		objPtr = list_entry(iter, struct barrier_node, list);
+		objPtr = list_entry(iter, barrier_node_t, list);
 		if(objPtr->barrier->bID == barrierID) {
 			break;
 		}
@@ -292,7 +292,7 @@ int _get_next_id()
 	4. release spinlock
 	
 */
-void _leave_barrier(struct barrier_node *objPtr, unsigned long flags) {
+void _leave_barrier(barrier_node_t *objPtr, unsigned long flags) {
 	int pid = current->tgid;
 	printk(KERN_INFO "process %d is leaving barrier %d\n",
 		pid, objPtr->barrier->bID
@@ -304,7 +304,7 @@ void _leave_barrier(struct barrier_node *objPtr, unsigned long flags) {
 		printk(KERN_ERR "NULL barrier passed to _leave_barrier!\n");
 		return;
 	}
-	struct barrier_struct *b = objPtr->barrier;
+	barrier_t *b = objPtr->barrier;
 
 	if ( atomic_dec_and_test( &b->refcount ) ) {
 		printk(KERN_INFO "Process %d is last to leave barrier %d\n",
@@ -323,3 +323,4 @@ void _leave_barrier(struct barrier_node *objPtr, unsigned long flags) {
 	//unlock barrier
 	spin_unlock_irqrestore( &b->spin_lock , flags);
 }
+
