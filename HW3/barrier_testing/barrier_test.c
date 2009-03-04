@@ -34,7 +34,7 @@ void better_perror(const char *s) {
 
 int main() {
 	puts("[1b]: Calling barrierdestroy with id=-1");	
-	int ret = 0 ; // barrierdestroy(-1);
+	int ret = 0;//barrierdestroy(-1);
 	if (0 > ret) perror("Error in global destroy");
 	else printf("Destroyed barriers had %d waiting processes\n", ret);
 	
@@ -48,7 +48,7 @@ int main() {
 	
 	if (status) better_perror("[2a] Error waiting for barrier 1");
 	else puts("[2a] Successfully waited for nobody");
-	if (0) {
+	if (1) {
 		status = barrierdestroy(barrier1);
 		printf("Survived with status %d\n", status);
 		if (status) better_perror("[2b] failed to destroy barrier 1");
