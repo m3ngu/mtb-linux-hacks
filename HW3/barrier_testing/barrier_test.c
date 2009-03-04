@@ -79,9 +79,9 @@ int main() {
 				if (status) {
 					better_perror("unexpected error on wait");
 				} else {
-					printf("[2c] child %d woke up and will now exit\n", pid);
-					exit(0);
+					printf("[2c] child %d woke up and will now exit\n", pid);				
 				}
+				exit(0);
 			} else {
 				childpids[i] = pid; /* store for reaping later */
 			}
@@ -101,9 +101,11 @@ int main() {
 		puts("[2c] children reaped");
 		status = barrierdestroy(barrier1);
 		if (status) {puts("[2d] didn't expect that..."); }
-		else puts("Destroyed barrier cleanly");
+		else {  puts("Destroyed barrier cleanly"); }
 		status = barrierdestroy(barrier1);
-		if (status) perror("[2e] double-destroy of barrier");
+		if (status) { 
+			perror("[2e] double-destroy of barrier");
+		}
 		else puts("[2e] unexpected success in double-destruction");
 	}
 	return 0;
