@@ -18,14 +18,14 @@
  * Barrier structure
  */
 struct barrier_struct {
-	unsigned int bID;			// barrier ID
+	unsigned int bID;		// barrier ID
 	spinlock_t spin_lock;		// spin lock
 	atomic_t refcount;
 	int waiting_count;		// items in queue
-	int initial_count;			// original N, or barrier size
+	int initial_count;		// original N, or barrier size
 	wait_queue_head_t queue;	// queue
 	int barrier_iteration;
-	int destroyed;				// set to 1 if we're in the destruction function
+	int destroyed;			// set to 1 if we're in the destruction function
 };
 
 struct barrier_node {
@@ -35,16 +35,12 @@ struct barrier_node {
 
 static LIST_HEAD(barrier_list);
 static DECLARE_MUTEX(search_lock);
-//static unsigned int next_id = 1;
 static atomic_t next_id = ATOMIC_INIT(0);
+
 /* TODO: block comment */
 int _get_next_id(void);
 void _leave_barrier(struct barrier_node *, unsigned long);
-/*
-struct barrier_struct* _get_barrier(int barrierID);
-int _add_barrier_node(struct barrier_struct* b);
-unsigned int _next_id(void);
-*/
+int destroyall(void);
 void display(void);
 struct barrier_node* _get_barrier_node(int barrierID);
 
@@ -55,75 +51,75 @@ asmlinkage int sys_barriercreate(int num)
 	
 	// create barrier node, allocate memory
 	struct barrier_node *bnPtr = (struct barrier_node *)kmalloc(sizeof(struct barrier_node), GFP_KERNEL);
-    if (NULL == bnPtr) {return -ENOMEM;}
-    
-    // create barrier, allocate memory
-    struct barrier_struct *b = (struct barrier_struct *)kmalloc(sizeof(struct barrier_struct), GFP_KERNEL);
-    if (NULL == b) {
-    	kfree(bnPtr);
-    	return -ENOMEM;
-    }
-    
-    b->initial_count = num;
-    atomic_set( &b->refcount , 0); // shouldn't this be zero?
-    b->waiting_count = 0;
-    b->destroyed = 0;
-    b->barrier_iteration = 0;
-    
-    spin_lock_init( &b->spin_lock );
-    
-    // init wait queue head
-    init_waitqueue_head( &b->queue );
+	if (NULL == bnPtr) {return -ENOMEM;}
+	
+	// create barrier, allocate memory
+	struct barrier_struct *b = (struct barrier_struct *)kmalloc(sizeof(struct barrier_struct), GFP_KERNEL);
+	if (NULL == b) {
+		kfree(bnPtr);
+		return -ENOMEM;
+	}
+	
+	b->initial_count = num;
+	atomic_set( &b->refcount , 0); // shouldn't this be zero?
+	b->waiting_count = 0;
+	b->destroyed = 0;
+	b->barrier_iteration = 0;
+	
+	spin_lock_init( &b->spin_lock );
+	
+	// init wait queue head
+	init_waitqueue_head( &b->queue );
 
-    b->bID = _get_next_id();
-    bnPtr->barrier = b;
-    
-    INIT_LIST_HEAD( &bnPtr->list );
-    list_add( &bnPtr->list , &barrier_list);
-    
-    display();
-    
-    return b->bID;
+	b->bID = _get_next_id();
+	bnPtr->barrier = b;
+	
+	INIT_LIST_HEAD( &bnPtr->list );
+	list_add( &bnPtr->list , &barrier_list);
+	
+	display();
+	
+	return b->bID;
+}
+
+int destroyall(void) {
+	
+	int destroyall_return = 0;
+	
+	struct list_head *iter;
+	struct barrier_node *objPtr;
+	
+	redo:
+	__list_for_each(iter, &barrier_list) {
+		objPtr = list_entry(iter, struct barrier_node, list);
+		
+		destroyall_return += sys_barrierdestroy( objPtr->barrier->bID );
+		goto redo;
+	}
+	
+	return destroyall_return;
 }
 
 asmlinkage int sys_barrierdestroy(int barrierID)
 {
 	// speial case barrierID = -1
 	// destroy everythign :D
+	if (barrierID == -1) {return destroyall();}
 	
-	int destroyall_return = 0;
-	
-	// TODO: Fix Segmentation fault
-	if (barrierID == -1 /*&& !list_empty( &barrier_list )*/) {
-	
-		struct list_head *iter;
-		struct barrier_node *objPtr;
-		redo:
-			__list_for_each(iter, &barrier_list) {
-				objPtr = list_entry(iter, struct barrier_node, list);
-				
-				destroyall_return += sys_barrierdestroy( objPtr->barrier->bID );
-				goto redo;
-			}
-                
-        return destroyall_return;
-        
-	}
-  
   	// check ID validity
 	if (barrierID < 0) {return -EINVAL;}
-    
-    int return_value = 0;
-    struct barrier_node *objPtr = _get_barrier_node(barrierID);
-    unsigned long flags;
-    
-    if (objPtr != NULL) {
+	
+	int return_value = 0;
+	struct barrier_node *objPtr = _get_barrier_node(barrierID);
+	unsigned long flags;
+	
+	if (objPtr != NULL) {
 		printk(KERN_INFO "deleting from list\n");
 		down(&search_lock);
-        list_del(&objPtr->list);
-        up(&search_lock);
-    	// lock barrier
-    	printk(KERN_INFO "in destroy routine for barrier %d\n", barrierID);
+		list_del(&objPtr->list);
+		up(&search_lock);
+		// lock barrier
+		printk(KERN_INFO "in destroy routine for barrier %d\n", barrierID);
 		spin_lock_irqsave( &objPtr->barrier->spin_lock, flags );
 		
 		// set destroyed mode
@@ -142,9 +138,9 @@ asmlinkage int sys_barrierdestroy(int barrierID)
 			return_value = wc;
 		}
 		_leave_barrier(objPtr, flags);
-        printk(KERN_INFO "trying to read current barrier list\n");
-        display();
-    }
+		printk(KERN_INFO "trying to read current barrier list\n");
+		display();
+	}
 	printk(KERN_INFO "Exiting destruct routine\n");
 	return return_value;
 }
@@ -156,12 +152,12 @@ asmlinkage int sys_barrierwait(int barrierID)
 	
 	// check ID validity
 	if (barrierID < 0) {return -EINVAL;}
-    
-    struct barrier_node *objPtr = _get_barrier_node(barrierID);
-    
-    if (NULL == objPtr) { /* not found */
-    	return -EINVAL;
-    } else {
+	
+	struct barrier_node *objPtr = _get_barrier_node(barrierID);
+	
+	if (NULL == objPtr) { /* not found */
+		return -EINVAL;
+	} else {
 		int my_iteration;
 		unsigned long flags; // overwritten by macro
 		
@@ -231,21 +227,21 @@ asmlinkage int sys_barrierwait(int barrierID)
 
 void display(void)
 {
-    struct list_head *iter;
-    struct barrier_node *objPtr;
-    down(&search_lock);
+	struct list_head *iter;
+	struct barrier_node *objPtr;
+	down(&search_lock);
 
-    printk(KERN_INFO "Current barrier list:\n");
-    __list_for_each(iter, &barrier_list) {
-    	printk(KERN_DEBUG "Current list pointer: %p\n", iter);
-        objPtr = list_entry(iter, struct barrier_node, list);
-    	printk(KERN_DEBUG "Current item pointer: %p\n", objPtr);
-    	printk(KERN_DEBUG "    id:%d|cap:%d\n"
-        	, objPtr->barrier->bID
-        	, objPtr->barrier->initial_count);
-    }
-    up(&search_lock);
-    printk(KERN_INFO "End of list\n");
+	printk(KERN_INFO "Current barrier list:\n");
+	__list_for_each(iter, &barrier_list) {
+		printk(KERN_DEBUG "Current list pointer: %p\n", iter);
+		objPtr = list_entry(iter, struct barrier_node, list);
+		printk(KERN_DEBUG "Current item pointer: %p\n", objPtr);
+		printk(KERN_DEBUG "id:%d|cap:%d\n"
+			, objPtr->barrier->bID
+			, objPtr->barrier->initial_count);
+	}
+	up(&search_lock);
+	printk(KERN_INFO "End of list\n");
 }
 
 /**
@@ -255,23 +251,23 @@ void display(void)
 struct barrier_node* _get_barrier_node(int barrierID)
 {
 	struct list_head *iter;
-    struct barrier_node *objPtr = NULL;
-    down(&search_lock);
+	struct barrier_node *objPtr = NULL;
+	down(&search_lock);
 	
-    __list_for_each(iter, &barrier_list) {
-        objPtr = list_entry(iter, struct barrier_node, list);
-        if(objPtr->barrier->bID == barrierID) {
+	__list_for_each(iter, &barrier_list) {
+		objPtr = list_entry(iter, struct barrier_node, list);
+		if(objPtr->barrier->bID == barrierID) {
 			break;
-        }
-    }
-    if (NULL != objPtr) {
+		}
+	}
+	if (NULL != objPtr) {
 		atomic_inc(&objPtr->barrier->refcount);
 	} else {
 		printk(KERN_INFO "Barrier %d not found!\n", barrierID);
 	}
 	up(&search_lock);
 
-    return objPtr; // Not found
+	return objPtr; // Not found
 }
 
 /**
