@@ -13,3 +13,5 @@ test-barrier: barrier_test.c
 test: test-barrier
 	./$^
 
+clean:
+	rm test-barrier
