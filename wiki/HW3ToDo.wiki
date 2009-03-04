@@ -2,7 +2,7 @@
 
 = HW3 To Do =
 
-  # Comment code
+  # Comment code (TBM: done for barrier.c)
   # Writeup a Readme
   # Fix makefile for sthreads (DONE)
   # Create patch and apply to a clean VM
