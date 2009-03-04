@@ -286,11 +286,6 @@ void test5() {
 
 
 int main() {
-
-	puts("[1b]: Calling barrierdestroy with id=-1");	
-	int ret = barrierdestroy(-1);
-	if (0 > ret) perror("Error in global destroy");
-	else printf("Destroyed barriers had %d waiting processes\n", ret);
 	printf("*****************************************************\n");
 	printf("***** TEST 1 TASK + BARRIER SIZE 1 ******************\n");
 	test1();
