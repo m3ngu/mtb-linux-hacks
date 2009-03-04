@@ -163,8 +163,34 @@ void test2() {
 /**
  * Tests when we try to open multiple barriers simultaneously
  */
+#define CASCADE_LENGTH 100
+ 
+void test3_cascade(void *arg) {
+	int *cascade = (int *) arg;
+	int problems = 0 ;
+	int pid = getpid();
+	printf("[3a] process %d attempting to cascade through %d barriers\n",
+		pid, CASCADE_LENGTH);
+	for (int i = 0; i < CASCADE_LENGTH; i++) {
+		if (barrierwait(cascade[i])) problems++;
+	}
+	printf("[3a] process %d had %d problems on cascade\n", pid, problems);
+}
 void test3() {
-
+	int barriers[CASCADE_LENGTH];
+	int kids[2];
+	for (int i = 0; i < CASCADE_LENGTH; i++) {
+		barriers[i] = barriercreate(2);
+		if (0 > barriers[i]) perror("[3a] Failed to create a barrier");
+	}
+	_spawn_all(kids,test3_cascade, (void *) barriers);
+	_wait_all(kids);
+	int status = barrierdestroy(-1);
+	if (status) { 
+		printf("[3b] Destroying all barriers gave return of %d\n", status);
+	} else {
+		puts("[3b] destroyed all barriers succesfully");
+	}
 
 }
 
@@ -267,6 +293,7 @@ int main() {
 	else printf("Destroyed barriers had %d waiting processes\n", ret);
 	test1();
 	test2();
+	test3();
 	test4();
 	test5();
 	return 0;
