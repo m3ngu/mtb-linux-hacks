@@ -52,7 +52,7 @@ void test2() {
 }
 
 /**
- * Tests when we try to open multiple barriers simulatenously
+ * Tests when we try to open multiple barriers simultaneously
  */
 void test3() {
 
@@ -61,7 +61,7 @@ void test3() {
 
 
 /**
- * Test N tasks with barrier of size N
+ * Tests N tasks with barrier of size N
  */
 void test4() {
 
@@ -70,7 +70,7 @@ void test4() {
 
 
 /**
- * Test N tasks with barrier of size N+1, wake everybody,
+ * Tests N tasks with barrier of size N+1, wake everybody,
  * they stay in queue, then we launch the N+1 task
  */
 void test5() {
