@@ -29,6 +29,10 @@ typedef struct barrier_struct {
 	int destroyed;			// set to 1 if we're in the destruction function
 } barrier_t;
 
+/**
+ * Structure queued in hhe barrier list
+ * contains list pointers + a barrier
+ */
 typedef struct barrier_node {
 	barrier_t *barrier;
 	list_head_t list;
@@ -38,13 +42,21 @@ static LIST_HEAD(barrier_list);
 static DECLARE_MUTEX(search_lock);
 static atomic_t next_id = ATOMIC_INIT(0);
 
-/* TODO: block comment */
+/**
+ * Function declarations
+ */
 int _get_next_id(void);
 void _leave_barrier(barrier_node_t *o, unsigned long f);
 int destroyall(void);
 void display(void);
 barrier_node_t* _get_barrier_node(int barrierID);
 
+
+/**
+ * Create a barrier
+ * @param num Size of the barrier
+ * @return barrier ID
+ */
 asmlinkage int sys_barriercreate(int num)
 {
 	printk(KERN_INFO "entering sys_barriercreate\n");
@@ -62,6 +74,7 @@ asmlinkage int sys_barriercreate(int num)
 		return -ENOMEM;
 	}
 	
+	// set barrier struct fields
 	printk(KERN_INFO "memory allocated\n");
 	b->initial_count = num;
 	atomic_set( &b->refcount , 0); // shouldn't this be zero?
@@ -69,28 +82,38 @@ asmlinkage int sys_barriercreate(int num)
 	b->destroyed = 0;
 	b->barrier_iteration = 0;
 	
+	// init barrier spin_lock
 	spin_lock_init( &b->spin_lock );
 	
 	// init wait queue head
 	init_waitqueue_head( &b->queue );
 
+	// set id
 	b->bID = _get_next_id();
 	bnPtr->barrier = b;
 	
+	// add barrier node to the barrier list
 	INIT_LIST_HEAD( &bnPtr->list );
 	list_add( &bnPtr->list , &barrier_list);
 	printk(KERN_INFO "initialization complete: id is %d\n", b->bID);
 
-	
+	// debug, print list of barriers
 	display();
 	
+	// return barrier ID
 	return b->bID;
 }
 
+
+/**
+ * Function to destroy a barrier given its ID
+ * @param ID of the barrier to destroy, or -1 to destroy all
+ * @return number of awoken process, or -1 if barrier not found or already destroyed
+ */
 asmlinkage int sys_barrierdestroy(int barrierID)
 {
 	// speial case barrierID = -1
-	// destroy everythign :D
+	// destroy everything
 	if (barrierID == -1) {return destroyall();}
 	
   	// check ID validity
@@ -100,13 +123,16 @@ asmlinkage int sys_barrierdestroy(int barrierID)
 	barrier_node_t *objPtr = _get_barrier_node(barrierID);
 	unsigned long flags;
 	
+	// barrier doesn't exist (or wrong ID?) return error
 	if ( NULL == objPtr ) {
 		printk(KERN_INFO "attempting to delete nonexistent barrier %d\n",
 			barrierID);
 		return -EINVAL;
-	} else {
+	 
+	} else { // barrier found
 		printk(KERN_INFO "in destroy routine for barrier %d\n", barrierID);
 		printk(KERN_INFO "deleting from list\n");
+		// lock barrier list, delete, release lock (barrier can't be found now)
 		down(&search_lock);
 		list_del(&objPtr->list);
 		up(&search_lock);
@@ -117,7 +143,6 @@ asmlinkage int sys_barrierdestroy(int barrierID)
 		objPtr->barrier->destroyed = 1;
 		
 		// if people in queue, wake them up, and count
-		
 		int wc = objPtr->barrier->waiting_count;
 
 		printk(KERN_INFO "Found %d waiters\n", wc);
@@ -128,6 +153,7 @@ asmlinkage int sys_barrierdestroy(int barrierID)
 			// remember - number of awoken processes
 			return_value = wc;
 		}
+		// leave barrier properly (destroy memory if last one to leave)
 		_leave_barrier(objPtr, flags);
 		printk(KERN_INFO "trying to read current barrier list\n");
 		display();
@@ -136,6 +162,11 @@ asmlinkage int sys_barrierdestroy(int barrierID)
 	return return_value;
 }
 
+
+/**
+ * Helper function, not required in the HW, destroy every barrier
+ * @return number of awoken processes accross all barriers
+ */
 int destroyall(void) {
 	
 	int destroyall_return = 0;
@@ -143,6 +174,7 @@ int destroyall(void) {
 	list_head_t *iter;
 	barrier_node_t *objPtr;
 	
+	// iterate over the list, destroy the first elem until list empty
 	redo:
 	__list_for_each(iter, &barrier_list) {
 		objPtr = list_entry(iter, barrier_node_t, list);
@@ -150,10 +182,15 @@ int destroyall(void) {
 		destroyall_return += sys_barrierdestroy( objPtr->barrier->bID );
 		goto redo;
 	}
-	
+	// count the number of awoken processes (not bulletproof, barrierdestroy returns -1)
 	return destroyall_return;
 }
 
+/**
+ * The current process waits at the barrier, unless is the Nth one and wakes everybody up
+ * @param barrierID ID of the barrier to 'grab and wait'
+ * @return 0 if everything went OK, negative number otherwise
+ */
 asmlinkage int sys_barrierwait(int barrierID)
 {
 	int return_value = 0;
@@ -162,17 +199,20 @@ asmlinkage int sys_barrierwait(int barrierID)
 	// check ID validity
 	if (barrierID < 0) {return -EINVAL;}
 	
+	// get barrier, update refcount
 	barrier_node_t *objPtr = _get_barrier_node(barrierID);
 	
-	if (NULL == objPtr) { /* not found */
+	// if not found, barrier ID must be wrong
+	if (NULL == objPtr) {
 		return -EINVAL;
-	} else {
+	} else { // barrier found
 		int my_iteration;
 		unsigned long flags; // overwritten by macro
 		
 		// lock barrier
 		barrier_t *b = objPtr->barrier;
 		spin_lock_irqsave( &b->spin_lock , flags);
+		// if it was destroyed, leave and return error
 		if (b->destroyed) {
 			_leave_barrier(objPtr, flags);
 			return -EINVAL;
@@ -201,8 +241,8 @@ asmlinkage int sys_barrierwait(int barrierID)
 
 			printk(KERN_INFO "Process %d getting in queue\n", pid);
 
+			// get on the waitqueue
 			DEFINE_WAIT(wait);
-		
 			printk(KERN_INFO "Process %d Prepare_to_wait\n", pid);
 			prepare_to_wait( &b->queue , &wait, TASK_INTERRUPTIBLE );
 
@@ -225,6 +265,7 @@ asmlinkage int sys_barrierwait(int barrierID)
 			if (b->barrier_iteration == my_iteration) {
 				return_value = -ECANCELED;
 			}
+			// leave barrier properly
 			_leave_barrier(objPtr, flags);
 		}
 	}
@@ -233,6 +274,9 @@ asmlinkage int sys_barrierwait(int barrierID)
 
 }
 
+/**
+ * helper/debug function, prints barrier list to KERN_INFO
+ */
 void display(void)
 {
 	list_head_t *iter;
@@ -253,8 +297,14 @@ void display(void)
 }
 
 /**
- * helper function, gets a barrier node that contains the barrier with a given ID
- * returns NULL if it was not found
+ * Get a barrier node:
+ *  - lock barrier list
+ *  - barrier found, update refcount
+ *  - release barrier list
+ *  We need to lock the whole list and update the ref count to make sure no
+ *  one has deleted the barrier by the time we reach it.
+ * @param ID of the desired barrier
+ * @return barrier_node or NULL if it was not found
  */
 barrier_node_t* _get_barrier_node(int barrierID)
 {
@@ -287,19 +337,22 @@ int _get_next_id()
 }
 
 /*
-	1. assume that we have the spin-lock
-	2. decrement refcount
-	3. if 0
-		a. test for destroyed flag
-		b. free memory if need be
-	4. release spinlock
-	
+ * Leaves a barrier properly, decrement refcount, destroy if the barrier is in
+ * destroy mode and we're the last one 
+ *	1. assume that we have the spin-lock
+ *	2. decrement refcount
+ *	3. if 0
+ *		a. test for destroyed flag
+ *		b. free memory if need be
+ *	4. release spinlock
+ *	
 */
 void _leave_barrier(barrier_node_t *objPtr, unsigned long flags) {
 	int pid = current->tgid;
 	printk(KERN_INFO "process %d is leaving barrier %d\n",
 		pid, objPtr->barrier->bID
 	);
+	// sanity checks
 	if (NULL == objPtr) {
 		printk(KERN_ERR "NULL list-node passed to _leave_barrier!\n");
 		return;
@@ -309,9 +362,11 @@ void _leave_barrier(barrier_node_t *objPtr, unsigned long flags) {
 	}
 	barrier_t *b = objPtr->barrier;
 
+	// are we the last one?
 	if ( atomic_dec_and_test( &b->refcount ) ) {
 		printk(KERN_INFO "Process %d is last to leave barrier %d\n",
 		pid, b->bID); // XXX undeclared
+		// should it be destroyed?
 		if (b->destroyed == 1)
 		{
 			spin_unlock_irqrestore( &b->spin_lock , flags);
