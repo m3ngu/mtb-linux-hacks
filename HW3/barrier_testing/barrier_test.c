@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <string.h>
+#include <signal.h>
 #include "asm/unistd.h"
 
 _syscall1(int, barriercreate, 	int, num)
@@ -39,6 +40,7 @@ int magic_fork( void* func(void* ), void* arg )
   if (pid == 0) // child
     {
       func(arg);
+      exit(0);
     }
   else return pid;
 }
@@ -84,8 +86,9 @@ void test4() {
 
 // helper function for test 5
 void helper5(int bID) {
+  printf("get in queue with barrier %i\n",bID);
   int waitOK = barrierwait(bID);
-  return 1;
+  printf("left barrier %i\n",bID);
 }
 
 
@@ -96,9 +99,19 @@ void helper5(int bID) {
 void test5() {
   printf("[5a]: create a barrier of size 3, bid=");
   int bID = createbarrier(3); printf("%i\n",bID);
-  
-
-
+  int t1 = magic_fork( helper5, void );
+  int t2 = magic_fork( helper5, void );
+  printf("[5b]: send wake signals to the two processes\n");
+  sleep(1);
+  kill(t1,SIGCONT);
+  kill(t2,SIGCONT);
+  sleep(1);
+  printf("[5c]: send a third task to the barrier\n");
+  int t3 = magic_fork( helper5, void );
+  waitpid(t1);
+  waitpid(t2);
+  waitpid(t3);
+  printf("[5d]: test done\n");
 }
 
 
