@@ -39,6 +39,7 @@ static DECLARE_MUTEX(search_lock);
 static atomic_t next_id = ATOMIC_INIT(0);
 /* TODO: block comment */
 int _get_next_id(void);
+void _leave_barrier(struct barrier_node *, int);
 /*
 struct barrier_struct* _get_barrier(int barrierID);
 int _add_barrier_node(struct barrier_struct* b);
@@ -64,8 +65,10 @@ asmlinkage int sys_barriercreate(int num)
     }
     
     b->initial_count = num;
-    // atomic_set( &b->waiting_count , num); // shouldn't this be zero?
+    atomic_set( &b->refcount , 0); // shouldn't this be zero?
     b->waiting_count = 0;
+    b->destroyed = 0;
+    b->barrier_iteration = 0;
     
     spin_lock_init( &b->spin_lock );
     
@@ -112,16 +115,16 @@ asmlinkage int sys_barrierdestroy(int barrierID)
     
     int return_value = 0;
     struct barrier_node *objPtr = _get_barrier_node(barrierID);
+    int flags;
     
     if (objPtr != NULL) {
 		printk(KERN_INFO "deleting from list\n");
-//		down(&search_lock);
+		down(&search_lock);
         list_del(&objPtr->list);
-//        up(&search_lock);
-
+        up(&search_lock);
     	// lock barrier
     	printk(KERN_INFO "in destroy routine for barrier %d\n", barrierID);
-		spin_lock( &objPtr->barrier->spin_lock );
+		spin_lock_irqsave( &objPtr->barrier->spin_lock, flags );
 		
 		// set destroyed mode
 		objPtr->barrier->destroyed = 1;
@@ -138,10 +141,7 @@ asmlinkage int sys_barrierdestroy(int barrierID)
 			// remember - number of awoken processes
 			return_value = wc;
 		}
-        printk(KERN_INFO "freeing barrier\n");
-        kfree(objPtr->barrier);
-        printk(KERN_INFO "freeing barrier list entry\n");
-        kfree(objPtr);
+		_leave_barrier(objPtr, flags);
         printk(KERN_INFO "trying to read current barrier list\n");
         display();
     }
@@ -168,6 +168,10 @@ asmlinkage int sys_barrierwait(int barrierID)
 		// lock barrier
 		struct barrier_struct *b = objPtr->barrier;
 		spin_lock_irqsave( &b->spin_lock , flags);
+		if (b->destroyed) {
+			/* save some time: return -1 */
+			/* but we'll need to call _leave_barrier anyway */
+		}
 		my_iteration = b->barrier_iteration;
 		// update the counter of people waiting
 		if (++b->waiting_count == b->initial_count ) // barrier full
@@ -213,26 +217,11 @@ asmlinkage int sys_barrierwait(int barrierID)
 
 			//lock barrier
 			spin_lock_irqsave( &b->spin_lock , flags);
+			//if barrier is marked destroyed, set return to -1
 			if (b->barrier_iteration == my_iteration) {
 				return_value = -1;
 			}
-			//if barrier is marked destroyed, set return to -1
-			if ( atomic_dec_and_test( &b->refcount ) ) {
-				printk(KERN_INFO "Process %d is last to leave barrier %d\n",
-				pid, b->bID);
-				if (b->destroyed == 1)
-				{
-					printk(KERN_INFO "Barrier in destroyed mode?\n");
-
-					printk(KERN_INFO 
-						"refcount at zero: destroying barrier %d\n",
-						b->bID);
-					// and then actually do it
-				}
-			} 
-			
-			//unlock barrier
-			spin_unlock_irqrestore( &b->spin_lock , flags);
+			_leave_barrier(objPtr, flags);
 		}
 	}
 	// return the return value
@@ -244,7 +233,7 @@ void display(void)
 {
     struct list_head *iter;
     struct barrier_node *objPtr;
-//    down(&search_lock);
+    down(&search_lock);
 
     printk(KERN_INFO "Current barrier list:\n");
     __list_for_each(iter, &barrier_list) {
@@ -255,7 +244,7 @@ void display(void)
         	, objPtr->barrier->bID
         	, objPtr->barrier->initial_count);
     }
-//    up(&search_lock);
+    up(&search_lock);
     printk(KERN_INFO "End of list\n");
 }
 
@@ -267,7 +256,7 @@ struct barrier_node* _get_barrier_node(int barrierID)
 {
 	struct list_head *iter;
     struct barrier_node *objPtr = NULL;
-//    down(&search_lock);
+    down(&search_lock);
 	
     __list_for_each(iter, &barrier_list) {
         objPtr = list_entry(iter, struct barrier_node, list);
@@ -280,7 +269,7 @@ struct barrier_node* _get_barrier_node(int barrierID)
 	} else {
 		printk(KERN_INFO "Barrier %d not found!\n", barrierID);
 	}
-//	up(&search_lock);
+	up(&search_lock);
 
     return objPtr; // Not found
 }
@@ -293,4 +282,40 @@ int _get_next_id()
   return atomic_inc_return( &next_id );
 }
 
+/*
+	1. assume that we have the spin-lock
+	2. decrement refcount
+	3. if 0
+		a. test for destroyed flag
+		b. free memory if need be
+	4. release spinlock
+	
+*/
+void _leave_barrier(struct barrier_node *objPtr, int flags) {
+	int pid = current->tgid;
+	if (NULL == objPtr) {
+		printk(KERN_ERR "NULL list-node passed to _leave_barrier!\n");
+		return;
+	} else if ( NULL == objPtr->barrier ) {
+		printk(KERN_ERR "NULL barrier passed to _leave_barrier!\n");
+		return;
+	}
+	struct barrier_struct *b = objPtr->barrier;
 
+	if ( atomic_dec_and_test( &b->refcount ) ) {
+		printk(KERN_INFO "Process %d is last to leave barrier %d\n",
+		pid, b->bID); // XXX undeclared
+		if (b->destroyed == 1)
+		{
+			spin_unlock_irqrestore( &b->spin_lock , flags);
+			printk(KERN_INFO "Barrier %d in destroyed mode\n", b->bID);
+			printk(KERN_INFO "freeing barrier\n");
+			kfree(b);
+			printk(KERN_INFO "freeing barrier list entry\n");
+			kfree(objPtr);
+			return;
+		}
+	} 	
+	//unlock barrier
+	spin_unlock_irqrestore( &b->spin_lock , flags);
+}
