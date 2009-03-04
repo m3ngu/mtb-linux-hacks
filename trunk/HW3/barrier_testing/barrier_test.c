@@ -122,8 +122,55 @@ void test3() {
 /**
  * Tests N tasks with barrier of size N
  */
+ 
+void test4_helper(void *b) {
+	int pid = getpid();
+	int barrier1 = (int) b;
+	printf("[4b] child %d is now waiting for the barrier\n", pid);
+	int status = barrierwait(barrier1);
+	if (status) {
+		better_perror("unexpected error on wait");
+	} else {
+		printf("[4b] child %d woke up, will re-queue\n", pid);
+	}
+	status = barrierwait(barrier1);
+	if (status) {
+		better_perror("unexpected error on wait");
+	} else {
+		printf("[4c] child %d woke up and will now exit\n", pid);				
+	}
+}
+ 
 void test4() {
-
+	/* 2c: barrier of four, fork off three, wait a second, and go */
+	printf("[4a] creating a barrier of size %d\n", BSIZE1);
+	int barrier1 = barriercreate(BSIZE1);
+	int status;
+	if ( 0 > barrier1 ) { better_perror("[4a] failed to create barrier"); }
+	else {
+		int childpids[BSIZE1 - 1];
+		printf("[4a] created barrier %d, size %d\n", barrier1, BSIZE1);
+		_spawn_all(childpids, test4_helper, (void *) barrier1);
+		printf("[4b]: parent will wait a second, then go to the barrier\n");
+		sleep(1);
+		status = barrierwait(barrier1);
+		if (status) {better_perror("[4b] parent found error on wait"); }
+		else { puts("[4c] parent re-queueing"); }
+		status = barrierwait(barrier1);
+		if (status) {better_perror("[4c] parent found error on 2nd wait"); }
+		else { puts("[4c] parent left barrier, reaping children"); }
+		_wait_all(childpids);
+		puts("[4c] children reaped");
+		status = barrierdestroy(barrier1);
+		if (status) {
+			puts("[4d] error destroying barrier"); 
+		} else {  puts("[4d] Destroyed barrier cleanly"); }
+		status = barrierdestroy(barrier1);
+		if (status) { 
+			perror("[4e] double-destroy of barrier");
+		}
+		else puts("[4e] unexpected success in double-destruction");
+	}
 
 }
 
@@ -167,13 +214,14 @@ void test5() {
 
 int main() {
 
-  test5(); exit(0);
-
 	puts("[1b]: Calling barrierdestroy with id=-1");	
 	int ret = barrierdestroy(-1);
 	if (0 > ret) perror("Error in global destroy");
 	else printf("Destroyed barriers had %d waiting processes\n", ret);
 	test2();
+	test4();
+	test5();
+	return 0;
 	perror("[1b]");
 
 	int barrier1 = barriercreate(1);
