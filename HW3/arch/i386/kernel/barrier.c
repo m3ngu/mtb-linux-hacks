@@ -39,7 +39,7 @@ static DECLARE_MUTEX(search_lock);
 static atomic_t next_id = ATOMIC_INIT(0);
 /* TODO: block comment */
 int _get_next_id(void);
-void _leave_barrier(struct barrier_node *, int);
+void _leave_barrier(struct barrier_node *, unsigned long);
 /*
 struct barrier_struct* _get_barrier(int barrierID);
 int _add_barrier_node(struct barrier_struct* b);
@@ -115,7 +115,7 @@ asmlinkage int sys_barrierdestroy(int barrierID)
     
     int return_value = 0;
     struct barrier_node *objPtr = _get_barrier_node(barrierID);
-    int flags;
+    unsigned long flags;
     
     if (objPtr != NULL) {
 		printk(KERN_INFO "deleting from list\n");
@@ -291,7 +291,7 @@ int _get_next_id()
 	4. release spinlock
 	
 */
-void _leave_barrier(struct barrier_node *objPtr, int flags) {
+void _leave_barrier(struct barrier_node *objPtr, unsigned long flags) {
 	int pid = current->tgid;
 	if (NULL == objPtr) {
 		printk(KERN_ERR "NULL list-node passed to _leave_barrier!\n");
