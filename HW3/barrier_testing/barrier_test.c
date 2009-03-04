@@ -60,14 +60,63 @@ int magic_fork( void (*func) (void* ), void* arg )
 
 #define BSIZE1  4 
 
-
+void test1_helper(void *arg) {
+	int barrier_id = (int) arg;
+	int mypid = getpid();
+	
+	srand(mypid);
+	sleep((rand()/(RAND_MAX+1.0))*2.0);
+	
+	printf("[1b] Child (pid: %d) approaching barrier %d (size 1)\n", mypid, barrier_id);
+	int status = barrierwait(barrier_id);
+	
+	if ( -1 == status) {
+		printf("[1b] Child (pid: %d) left barrier with error\n", mypid);
+	} else if (0 == status) {
+		printf("[1b] Child (pid: %d) left barrier normally\n", mypid);
+	}
+}
 
 /**
  * Tests 1 tasks with barrier of size 1
  */
 void test1() {
 
-
+	int bId = barriercreate(1);
+	int status = 0;
+	int mypid = getpid();
+	
+	printf("[1a] Parent (pid: %d) approaching barrier %d (size 1)\n", getpid() ,bId);
+	status = barrierwait(bId);
+	
+	if ( -1 == status) {
+		printf("[1a] Parent (pid: %d) left barrier with error\n", mypid);
+	} else if (0 == status) {
+		printf("[1a] Parent (pid: %d) left barrier normally\n", mypid);
+	}
+	
+#define CHILD_COUNT 3
+	int childstatus = 0;
+	int childpids[CHILD_COUNT];
+	
+	for (int i = 0; i < CHILD_COUNT; i++) {
+		childpids[i] = magic_fork(test1_helper, (void *) bId);
+	}
+	
+	for (int i = 0; i < CHILD_COUNT; i++) {
+		waitpid(childpids[i], &childstatus, 0);
+	}
+	
+	printf("[1c] Destroying barrier %d (size 1)\n", bId);
+	status = barrierdestroy(bId);
+	
+	if ( -1 == status) {
+		printf("[1c] Error destroying barrier %d (size 1)\n", bId);
+	} else if (0 == status) {
+		printf("[1c] Destroyed barrier %d (size 1) normally\n", bId);
+	} else {
+		printf("[1c] Destroyed barrier %d (size 1), but there were %d processes waiting\n", bId, status);
+	}
 }
 
 /**
@@ -219,6 +268,7 @@ int main() {
 	int ret = barrierdestroy(-1);
 	if (0 > ret) perror("Error in global destroy");
 	else printf("Destroyed barriers had %d waiting processes\n", ret);
+	test1();
 	test2();
 	test4();
 	test5();
