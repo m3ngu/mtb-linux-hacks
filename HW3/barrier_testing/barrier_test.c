@@ -195,15 +195,15 @@ void test5() {
   int i, status;
   printf("[5a]: create a barrier of size 3, bid=");
   int bID = barriercreate(3); printf("%i\n",bID);
-  int t1 = magic_fork( helper5, (void*) bID );
-  int t2 = magic_fork( helper5, (void*) bID );
+  magic_fork( helper5, (void*) bID );
+  magic_fork( helper5, (void*) bID );
   printf("[5b]: send wake signals to the two processes\n");
   sleep(1);
   kill( getppid() ,SIGCONT);
   kill( getppid() ,SIGCONT);
   sleep(1);
   printf("[5c]: send a third task to the barrier\n");
-  int t3 = magic_fork( helper5, (void*) bID );
+  magic_fork( helper5, (void*) bID );
   for (i = 0; i < 3; i++)
     wait(&status);
   printf("[5d]: test done\n");
