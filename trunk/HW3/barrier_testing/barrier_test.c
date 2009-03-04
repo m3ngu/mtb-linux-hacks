@@ -4,6 +4,7 @@
 	2/25/09
 */
 #define _REENTRANT
+#define _XOPEN_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
