@@ -34,7 +34,7 @@ int threadsem(void *arg) {
 }
 
 int main(int argc, char *argv[]) {
-	sthread_t thr1, thr2, thr3, thr4;
+	sthread_t thr1, thr2, thr3, thr4, thrA, thrB;
 	sthread_sem_t sem1;
 	struct sem_thread_info 
 		info1 = { .thread_id = 1, .sem = &sem1 },
@@ -43,23 +43,25 @@ int main(int argc, char *argv[]) {
 		info4 = { .thread_id = 4, .sem = &sem1 };
 	if (sthread_init() == -1)
 		fprintf(stderr, "%s: sthread_init: %s\n", argv[0], strerror(errno));
-	if (0) {
-		if (sthread_create(&thr1, threadmain, (void *)1) == -1)
-		fprintf(stderr, "%s: sthread_create: %s\n", argv[0], strerror(errno));
-		
-		if (sthread_create(&thr2, threadmain, (void *)2) == -1)
-		fprintf(stderr, "%s: sthread_create: %s\n", argv[0], strerror(errno));
-		
-		sleep(1);
-		sthread_wake(thr1);
-		sleep(1);
-		sthread_wake(thr2);
-		sleep(1);
-		sthread_wake(thr1);
-		sthread_wake(thr2);
-		sleep(1);
-	}
+	
+	puts("*** basic thread tests ***");
 
+	if (sthread_create(&thrA, threadmain, (void *)1) == -1)
+	fprintf(stderr, "%s: sthread_create: %s\n", argv[0], strerror(errno));
+	
+	if (sthread_create(&thrB, threadmain, (void *)2) == -1)
+	fprintf(stderr, "%s: sthread_create: %s\n", argv[0], strerror(errno));
+	
+	sleep(1);
+	sthread_wake(thrA);
+	sleep(1);
+	sthread_wake(thrB);
+	sleep(1);
+	sthread_wake(thrA);
+	sthread_wake(thrB);
+	sleep(1);
+
+	puts("*** semaphore tests: one semaphore of size 2, 4 threads ***");
 	sthread_sem_init(&sem1,2);
   	if (sthread_create(&thr1, threadsem, (void *) &info1) == -1)
 		fprintf(stderr, "%s: sthread_create: %s\n", argv[0], strerror(errno)); 
