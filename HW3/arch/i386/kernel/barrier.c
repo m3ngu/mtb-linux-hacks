@@ -174,8 +174,8 @@ asmlinkage int sys_barrierwait(int barrierID)
 		barrier_t *b = objPtr->barrier;
 		spin_lock_irqsave( &b->spin_lock , flags);
 		if (b->destroyed) {
-			/* save some time: return -1 */
-			/* but we'll need to call _leave_barrier anyway */
+			_leave_barrier(objPtr, flags);
+			return -EINVAL;
 		}
 		my_iteration = b->barrier_iteration;
 		// update the counter of people waiting
@@ -200,7 +200,7 @@ asmlinkage int sys_barrierwait(int barrierID)
 			spin_unlock_irqrestore( &b->spin_lock , flags);
 
 			printk(KERN_INFO "Process %d getting in queue\n", pid);
-		
+
 			DEFINE_WAIT(wait);
 		
 			printk(KERN_INFO "Process %d Prepare_to_wait\n", pid);
@@ -223,7 +223,7 @@ asmlinkage int sys_barrierwait(int barrierID)
 			spin_lock_irqsave( &b->spin_lock , flags);
 			//if barrier is marked destroyed, set return to -1
 			if (b->barrier_iteration == my_iteration) {
-				return_value = -1;
+				return_value = -ECANCELED;
 			}
 			_leave_barrier(objPtr, flags);
 		}
