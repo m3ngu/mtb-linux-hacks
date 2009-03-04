@@ -225,15 +225,12 @@ void test4() {
 }
 
 
-// task counter
-static int test5_counter = 1;
 // helper function for test 5
 void helper5(void* arg) {
-  int id = test5_counter; test5_counter++;
   int bID = (int) arg;
-  printf("task %i get in queue with barrier %i\n",id,bID);
+  printf("[5-] child %i get in queue with barrier %i\n",getpid(),bID);
   barrierwait(bID);
-  printf("task %i left barrier %i\n",id,bID);
+  printf("[5-] child %i left barrier %i\n",getpid(),bID);
 }
 
 
