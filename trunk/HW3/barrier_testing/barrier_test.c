@@ -291,10 +291,20 @@ int main() {
 	int ret = barrierdestroy(-1);
 	if (0 > ret) perror("Error in global destroy");
 	else printf("Destroyed barriers had %d waiting processes\n", ret);
+	printf("*****************************************************\n");
+	printf("***** TEST 1 TASK + BARRIER SIZE 1 ******************\n");
 	test1();
+	printf("*****************************************************\n");
+	printf("***** TEST M TASK + BARRIER SIZE N + MULTI DESTROYS *\n");
 	test2();
+	printf("*****************************************************\n");
+	printf("***** CASCADE: 100 BARRIERS, 2 TASKS ****************\n");
 	test3();
+	printf("*****************************************************\n");
+	printf("***** TEST N TASKS + BARRIER SIZE N *****************\n");
 	test4();
+	printf("*****************************************************\n");
+	printf("***** TEST N TASKS + 'WAKEUP' + BARRIER SIZE 1 ******\n");
 	test5();
 	return 0;
 }
