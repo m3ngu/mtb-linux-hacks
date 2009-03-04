@@ -310,7 +310,7 @@ void _leave_barrier(barrier_node_t *objPtr, unsigned long flags) {
 	}
 	barrier_t *b = objPtr->barrier;
 
-	if ( atomic_dec_and_test( &b->refcount ) ) {
+	if ( !atomic_dec_and_test( &b->refcount ) ) {
 		printk(KERN_INFO "Process %d is last to leave barrier %d\n",
 		pid, b->bID); // XXX undeclared
 		if (b->destroyed == 1)
