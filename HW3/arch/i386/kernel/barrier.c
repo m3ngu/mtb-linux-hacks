@@ -10,7 +10,7 @@
 #include <linux/wait.h>
 #include <linux/spinlock.h>
 #include <linux/linkage.h> // asmlinkage
-#include <asm/atomic.h>
+#include <asm/semaphore.h>
 #include <linux/errno.h>
 #include <linux/sched.h>
 
@@ -34,9 +34,11 @@ struct barrier_node {
 };
 
 static LIST_HEAD(barrier_list);
+static DECLARE_MUTEX(search_lock);
 //static unsigned int next_id = 1;
-static atomic_t nex_id = ATOMIC_INIT(0);
-
+static atomic_t next_id = ATOMIC_INIT(0);
+/* TODO: block comment */
+int _get_next_id(void);
 /*
 struct barrier_struct* _get_barrier(int barrierID);
 int _add_barrier_node(struct barrier_struct* b);
@@ -70,8 +72,7 @@ asmlinkage int sys_barriercreate(int num)
     // init wait queue head
     init_waitqueue_head( &b->queue );
 
-    b->bID = next_id++; // better id management later...;
-    // including some CONCURRENCY PROTECTION
+    b->bID = _get_next_id();
     bnPtr->barrier = b;
     
     INIT_LIST_HEAD( &bnPtr->list );
@@ -94,7 +95,6 @@ asmlinkage int sys_barrierdestroy(int barrierID)
 	
 		struct list_head *iter;
 		struct barrier_node *objPtr;
-		
 		redo:
 			__list_for_each(iter, &barrier_list) {
 				objPtr = list_entry(iter, struct barrier_node, list);
@@ -102,9 +102,7 @@ asmlinkage int sys_barrierdestroy(int barrierID)
 				destroyall_return += sys_barrierdestroy( objPtr->barrier->bID );
 				goto redo;
 			}
-        
-        next_id = 1;
-        
+                
         return destroyall_return;
         
 	}
@@ -116,7 +114,11 @@ asmlinkage int sys_barrierdestroy(int barrierID)
     struct barrier_node *objPtr = _get_barrier_node(barrierID);
     
     if (objPtr != NULL) {
-    
+		printk(KERN_INFO "deleting from list\n");
+//		down(&search_lock);
+        list_del(&objPtr->list);
+//        up(&search_lock);
+
     	// lock barrier
     	printk(KERN_INFO "in destroy routine for barrier %d\n", barrierID);
 		spin_lock( &objPtr->barrier->spin_lock );
@@ -138,20 +140,19 @@ asmlinkage int sys_barrierdestroy(int barrierID)
 		}
         printk(KERN_INFO "freeing barrier\n");
         kfree(objPtr->barrier);
-        printk(KERN_INFO "deleting from list\n");
-        list_del(&objPtr->list);
         printk(KERN_INFO "freeing barrier list entry\n");
         kfree(objPtr);
         printk(KERN_INFO "trying to read current barrier list\n");
         display();
     }
-	printk(KERN_INFO "Apparently done with destruct routine (WTF?)\n");
+	printk(KERN_INFO "Exiting destruct routine\n");
 	return return_value;
 }
 
 asmlinkage int sys_barrierwait(int barrierID)
 {
 	int return_value = 0;
+	int pid = current->tgid;
 	
 	// check ID validity
 	if (barrierID < 0) {return -EINVAL;}
@@ -185,7 +186,7 @@ asmlinkage int sys_barrierwait(int barrierID)
 			spin_unlock_irqrestore( &b->spin_lock , flags);
 			
 			// go
-			printk(KERN_INFO "We woke everybody up\n");
+			printk(KERN_INFO "Process %d woke everybody up\n", pid);
 			return 0;
 		}
 		else // get in queue and wait
@@ -194,11 +195,11 @@ asmlinkage int sys_barrierwait(int barrierID)
 			// release lock (do this before prepare_to_wait?)
 			spin_unlock_irqrestore( &b->spin_lock , flags);
 
-			printk(KERN_INFO "We get in queue\n");
+			printk(KERN_INFO "Process %d getting in queue\n", pid);
 		
 			DEFINE_WAIT(wait);
 		
-			printk(KERN_INFO "Prepare_to_wait\n");
+			printk(KERN_INFO "Process %d Prepare_to_wait\n", pid);
 			prepare_to_wait( &b->queue , &wait, TASK_INTERRUPTIBLE );
 
 			
@@ -206,7 +207,7 @@ asmlinkage int sys_barrierwait(int barrierID)
 			while (b->barrier_iteration == my_iteration && 0 == b->destroyed) // still the barrier we were waiting for
 				schedule();
 
-			printk(KERN_INFO "We just woke up\n");
+			printk(KERN_INFO "Process %d just woke up\n", pid);
 			// get out of the list
 			finish_wait( &objPtr->barrier->queue , &wait);
 
@@ -217,6 +218,8 @@ asmlinkage int sys_barrierwait(int barrierID)
 			}
 			//if barrier is marked destroyed, set return to -1
 			if ( atomic_dec_and_test( &b->refcount ) ) {
+				printk(KERN_INFO "Process %d is last to leave barrier %d\n",
+				pid, b->bID);
 				if (b->destroyed == 1)
 				{
 					printk(KERN_INFO "Barrier in destroyed mode?\n");
@@ -229,7 +232,7 @@ asmlinkage int sys_barrierwait(int barrierID)
 			} 
 			
 			//unlock barrier
-			spin_unlock_irqrestore( &objPtr->barrier->spin_lock , flags);
+			spin_unlock_irqrestore( &b->spin_lock , flags);
 		}
 	}
 	// return the return value
@@ -241,6 +244,7 @@ void display(void)
 {
     struct list_head *iter;
     struct barrier_node *objPtr;
+//    down(&search_lock);
 
     printk(KERN_INFO "Current barrier list:\n");
     __list_for_each(iter, &barrier_list) {
@@ -251,6 +255,7 @@ void display(void)
         	, objPtr->barrier->bID
         	, objPtr->barrier->initial_count);
     }
+//    up(&search_lock);
     printk(KERN_INFO "End of list\n");
 }
 
@@ -261,17 +266,23 @@ void display(void)
 struct barrier_node* _get_barrier_node(int barrierID)
 {
 	struct list_head *iter;
-    struct barrier_node *objPtr;
-
+    struct barrier_node *objPtr = NULL;
+//    down(&search_lock);
+	
     __list_for_each(iter, &barrier_list) {
         objPtr = list_entry(iter, struct barrier_node, list);
         if(objPtr->barrier->bID == barrierID) {
-        	return objPtr;
+			break;
         }
     }
-	
-	printk(KERN_INFO "Barrier %d not found!\n",barrierID);
-    return NULL; // Not found
+    if (NULL != objPtr) {
+		atomic_inc(&objPtr->barrier->refcount);
+	} else {
+		printk(KERN_INFO "Barrier %d not found!\n", barrierID);
+	}
+//	up(&search_lock);
+
+    return objPtr; // Not found
 }
 
 /**
