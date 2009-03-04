@@ -4,5 +4,5 @@
 
   # Comment code
   # Writeup a Readme
-  # Fix for sthreads
+  # Fix makefile for sthreads
   # Create patch and apply to a clean VM
