@@ -6,22 +6,22 @@
 */
 
 
-//#include <linux/wait.h>
-//#include <linux/init.h> // if we need to init the barrier_list... or in the .c?
+#include <linux/wait.h>
 
 
 /**
  * Barrier structure
  */
+ /*
 struct barrier_struct {
   unsigned int bID;                  // barrier ID
   spinlock_t spin_lock;		// spin lock
   int waiting_count;		// items in queue
   int initial_count;		// original N, or barrier size
-  wait_queue_head_t *queue;	// queue
+  wait_queue_head_t queue;	// queue
   int destroyed;			// set to 1 if we're in the destruction function
 };
-
+*/
 
 
 /**
@@ -38,25 +38,3 @@ int barrierdestroy(int barrierID);
  * Wait on the barrier, or release everyon if you're the Nth one
  */
 int barrierwait(int barrierID);
-
-/**
- * helper function, gets a barrier node that contains the barrier with a given ID
- * returns NULL if it was not found
- */
-struct barrier_node* _get_barrier_node(int barrierID);
-
-/**
- * helper function, gets a barrier with a given ID
- * returns NULL if it was not found
- */
-struct barrier_struct* _get_barrier(int barrierID);
-
-/**
- * Add a barrier node to the barrier list, don't check for any problems
- */
-int _add_barrier_node(struct barrier_struct* b);
-
-/**
- * Generates IDs for newly created barriers
- */
-unsigned int _next_id(void);

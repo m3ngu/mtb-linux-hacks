@@ -5,7 +5,7 @@
 
 
 CFLAGS= -std=c99 -Wall -pedantic -g
-TREE_TAG=.hmwk3
+TREE_TAG=-hwk3
 
 test-barrier: barrier_test.c
 	$(CC) $(CFLAGS) -static -I /usr/src/linux-2.6.11.12$(TREE_TAG)/include -o $@ $^ ../sthreads/sthread.o
