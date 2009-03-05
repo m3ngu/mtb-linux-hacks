@@ -24,13 +24,19 @@
 #define DEBUGF
 #endif
 
+/* structure for wait queue for semaphores: singly-linked list */
 struct sthread_thread_queue {
-	sthread_t thread;
-	struct sthread_thread_queue *next;
+	sthread_t thread;					/* the thread that is waiting */
+	struct sthread_thread_queue *next;	/* the next node in the list */
 };
 
+/* _spin_lock: set the spinlock for this semaphore (busy-wait until available)*/
 #define _spin_lock(s) 	while (test_and_set( &((s)->spin_lock))) { ; /* spin */}
+/* _spin_lock: unset the spinlock for this semaphore */
 #define _spin_unlock(s) ( (s)->spin_lock = 0 )
+/* _sem_init: initializer for a semaphore struct with capacity v */
+/* must be followed by setting .nextqtail to &.queuehead */
+/* is not, in fact, very useful, but it seemed like a good idea a the time */
 #define _sem_init(v)	 	{ 						\
 							.spin_lock = 0,			\
 							.initial_semaphore = v,	\
@@ -39,22 +45,43 @@ struct sthread_thread_queue {
 							.nextqtail = NULL,		\
 							.destroyed = 0,			\
 							}
-/* not safe vs. function calls */
+/* NOTE: the following macros are not safe if their arguments are 
+	function calls (they may evaluate their arguments repeatedly)
+*/
+/* _sem_avail: can I just grab this semaphore without waiting ?
+	requires that the semaphore have positive value and that nobody else
+	be waiting 
+*/
 #define _sem_avail(s)	( (s)->semaphore > 0 && NULL == (s)->queuehead)
+/* _sem_valid_check: is this an undestroyed semaphore? 
+	if not, abort the current function 
+*/
 #define _sem_valid_check(s) if (s->destroyed) { _spin_unlock(s); return -1;}
+/* _sem_lock_and_check:	generally, we will want to call the last two macros in 
+	sequence, so this macro does that.
+*/
 #define _sem_lock_and_check(s)	_spin_lock(s); _sem_valid_check(s);
 
 
-/* XXX need a block comment here */
+/* _make_queue_elem: allocate memory and initialize a queue element, to allow
+	the current thread to enqueue itself to wait for the semaphore to be 
+	available.  Returns NULL if no memory available.
+*/
 sthread_queue_t *_make_queue_elem();
 
 
 /*
  * Semaphore routines
+ * Block comments describing algorithms are included inside each function.
  */
 
 int sthread_sem_init(sthread_sem_t *sem, int count)
 {
+	/*
+		initialize semaphore using macro
+		initialize queue
+		return (no locks, no nuthin!)
+	*/
 	if ( 0 >= count ) return -1; /* invalid count */
 	sthread_sem_t tmp = _sem_init(count);
 	DEBUG("In init_sem");
@@ -67,13 +94,6 @@ int sthread_sem_init(sthread_sem_t *sem, int count)
 	fprintf(stderr, "*(sem->nextqtail) is %p\n", *(sem->nextqtail));
 #endif
 	return 0;
-	/*
-		initialize semaphore to count
-		remember init count
-		initialize queue to empty
-		set guard to 0
-		return structure (no locks, no nuthin!)
-	*/
 }
 
 int sthread_sem_destroy(sthread_sem_t *sem)
@@ -92,7 +112,6 @@ int sthread_sem_destroy(sthread_sem_t *sem)
 		check for waiters: if any
 			return error (or just wake everybody?)
 		else 
-			destroy struct
 			return 0
 	*/
 }
@@ -102,7 +121,10 @@ int sthread_sem_down(sthread_sem_t *sem)
 	/* short-circuit attempt: try to get the semaphore without blocking */
 	DEBUG("Entering full sem_down");
 	if ( 0 == sthread_sem_try_down(sem) ) return 0;
+	/* we might have to enqueue: create our queue element */
 	sthread_queue_t *q = _make_queue_elem();
+	if (NULL == q) return -1; /* no memory: should arguably be more fatal */
+	/* but for purposes of this exercise, simply failing will have to do */
 
 	_sem_lock_and_check(sem);	/* BEGIN CRITICAL SECTION */
 	if ( _sem_avail(sem) ) { /* well, won't we look silly */
@@ -154,6 +176,8 @@ int sthread_sem_down(sthread_sem_t *sem)
 	if ( NULL == sem->queuehead ) {
 		sem->nextqtail = &(sem->queuehead);
 	} else { /* ( NULL != sem->queuehead ) */
+		/* we might have just had a long series of sem-ups, so let the next
+			thread in the queue check if it's allowed out yet */
 		sthread_wake(sem->queuehead->thread);
 	}
 #ifdef STHREAD_DEBUG
@@ -169,9 +193,6 @@ int sthread_sem_down(sthread_sem_t *sem)
 	
 	/* 
 	before anything, call sthread_sem_try_down
-		// 		pro: avoids potentially useless memory allocation
-		//			 makes common case fast
-		//		con: requires taking spin lock twice
 	get spin_lock
 	check semaphore level
 	if available AND no waiters:
