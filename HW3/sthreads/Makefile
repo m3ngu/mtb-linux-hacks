@@ -3,7 +3,7 @@
 #
 
 CC=gcc
-CFLAGS=-g -O2 -Wall -std=c99 -pedantic
+CFLAGS=-g -O2 -Wall
 LDFLAGS=-g
 
 .c.s:
