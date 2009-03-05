@@ -2,7 +2,7 @@
 
 = HW3 To Do =
 
-  # Comment code (TBM: done for barrier.c)
-  # Writeup a Readme
+  # Comment code (TBM: done for barrier.c) (BW: done for sync.c, which I think means done)
+  # Writeup a Readme (NOT DONE!!  But the evaluation is in there, at least)
   # Fix makefile for sthreads (DONE)
-  # Create patch and apply to a clean VM
+  # Create patch and apply to a clean VM (working on the patch now -BW)
