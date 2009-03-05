@@ -1,0 +1,17 @@
+README for HW3, group 2 (Ben Warfield, Thierry Bertin-Mahieux, Mengu Sukan)
+
+Files in this package:
+	barrier.patch	-	actual kernel patch file
+	barrier_testing/barrier_test.c	- demonstration/test file for barriers
+	barrier_testing/Makefile	- Makefile for barrier demonstration/tests
+	sthreads/Makefile 	- Makefile for sthreads component
+	sthreads/sthread.c	- sthreads main source (unmodified)
+	sthreads/sthread.h	- sthreads header file (unmodified)
+	sthreads/sync.c   	- semaphore implementation file (main file for part 1.)
+	sthreads/sync.h   	- semaphore header file (declarations, struct def'n)
+	sthreads/test.c   	- test/demonstration code for semaphores
+
+To run barrier demonstration code, run "make test" in the barrier_testing 
+directory.
+
+To run sthreads demonstration code, run "make test" in the sthreads directory.
