@@ -1,6 +1,7 @@
 README for HW3, group 2 (Ben Warfield, Thierry Bertin-Mahieux, Mengu Sukan)
 
 Files in this package:
+	homework_work.txt	- In which we assert that this code is correct
 	barrier.patch	-	actual kernel patch file
 	barrier_testing/barrier_test.c	- demonstration/test file for barriers
 	barrier_testing/Makefile	- Makefile for barrier demonstration/tests
