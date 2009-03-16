@@ -505,6 +505,6 @@ asmlinkage long sys_request_key(const char __user *_type,
 
 asmlinkage long sys_keyctl(int cmd, unsigned long arg2, unsigned long arg3,
 			   unsigned long arg4, unsigned long arg5);
-asmlinkage long sys_getuserweight(uid_t uid);
-asmlinkage long sys_setuserweight(uid_t uid, int weight);
+asmlinkage long sys_getuserweight(int uid);
+asmlinkage long sys_setuserweight(int uid, int weight);
 #endif
