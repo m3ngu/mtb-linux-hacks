@@ -35,6 +35,7 @@ struct user_struct root_user = {
 	.sigpending	= ATOMIC_INIT(0),
 	.mq_bytes	= 0,
 	.locked_shm     = 0,
+	.uwrr_weight	= UWRR_DEFAULT_WEIGHT,
 #ifdef CONFIG_KEYS
 	.uid_keyring	= &root_user_keyring,
 	.session_keyring = &root_session_keyring,
@@ -91,10 +92,12 @@ struct user_struct *find_user(uid_t uid)
 void free_uid(struct user_struct *up)
 {
 	if (up && atomic_dec_and_lock(&up->__count, &uidhash_lock)) {
-		uid_hash_remove(up);
-		key_put(up->uid_keyring);
-		key_put(up->session_keyring);
-		kmem_cache_free(uid_cachep, up);
+		if ( UWRR_DEFAULT_WEIGHT != up->uwrr_weight ) {
+			uid_hash_remove(up);
+			key_put(up->uid_keyring);
+			key_put(up->session_keyring);
+			kmem_cache_free(uid_cachep, up);
+		}
 		spin_unlock(&uidhash_lock);
 	}
 }
@@ -119,6 +122,8 @@ struct user_struct * alloc_uid(uid_t uid)
 		atomic_set(&new->processes, 0);
 		atomic_set(&new->files, 0);
 		atomic_set(&new->sigpending, 0);
+		
+		new->uwrr_weight = UWRR_DEFAULT_WEIGHT;
 
 		new->mq_bytes = 0;
 		new->locked_shm = 0;

@@ -361,6 +361,9 @@ struct signal_struct {
 
 #define rt_task(p)		(unlikely((p)->prio < MAX_RT_PRIO))
 
+#define UWRR_DEFAULT_WEIGHT 10 	/* the default weight for any user */
+#define UWRR_TASK_PRIO 	120		/* the priority of a UWRR task (default-nice) */
+
 /*
  * Some day this will be a full-fledged user tracking system..
  */
@@ -372,6 +375,8 @@ struct user_struct {
 	/* protected by mq_lock	*/
 	unsigned long mq_bytes;	/* How many bytes can be allocated to mqueue? */
 	unsigned long locked_shm; /* How many pages of mlocked shm ? */
+	
+	unsigned long uwrr_weight;
 
 #ifdef CONFIG_KEYS
 	struct key *uid_keyring;	/* UID specific keyring */

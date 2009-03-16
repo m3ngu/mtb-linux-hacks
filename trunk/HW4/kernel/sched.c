@@ -5058,3 +5058,44 @@ task_t *kdb_cpu_curr(int cpu)
 	return(cpu_curr(cpu));
 }
 #endif
+
+asmlinkage long sys_getuserweight(int uid) {
+	struct user_struct *uptr = NULL;
+	int weight;
+	if ( -1 == uid) {
+		weight = current->user->uwrr_weight;
+	} else if ( 0 > uid || 65535 < uid ) { /* XXX better taken from limit.h? */
+		return -EINVAL;
+	} else {
+		uptr = alloc_uid(uid);
+		if (NULL == uptr) return -EINVAL;
+		weight = uptr->uwrr_weight;
+		free_uid(uptr);
+	}
+	return weight;
+}
+
+asmlinkage long sys_setuserweight(int uid, int weight) {
+	struct user_struct *uptr, *me; 
+	/* unbelievably, no upper limit to weight */
+	if ( 0 >= weight ) {
+		printk(KERN_DEBUG "invalid weight %d found\n", weight);
+		return -EINVAL;
+	}
+	if ( -1 > uid || 65535 < uid ) {
+		printk(KERN_DEBUG "invalid uid %d found", uid);
+		return -EINVAL;
+	}
+	/* only root is allowed in */
+	me = current->user;
+	if ( 0 != me->uid ) return -EACCES;
+	
+	if ( -1 == uid ) uptr = me;
+	else uptr = alloc_uid(uid);	
+	if (NULL == uptr) return -EINVAL;
+	
+	uptr->uwrr_weight = weight;
+
+	if ( -1 != uid ) free_uid(uptr);
+	return 0;
+}
