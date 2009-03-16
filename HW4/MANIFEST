@@ -1,5 +1,6 @@
 include/linux/sched.h
 kernel/sched.c
+kernel/user.c
 arch/i386/kernel/entry.S
 include/asm-i386/unistd.h
 include/linux/syscalls.h
