@@ -76,7 +76,14 @@ int main() {
 	printf("Current UID: %d\n", uid);
 	weight_found = setuserweight(uid,20);
 	if (0 == weight_found) puts("[2a]	unexpected success!");
-	else perror("[2a]	try to set your weight when not root");
+	else perror("[2a]	try to set your weight (possibly not as root)");
+
+	puts("[2b]	get your own user weight");
+	weight_found = getuserweight(-1);
+	if ( 0 < weight_found ) {
+		printf("[2b]	got weight %d\n", weight_found);
+	} else 
+		perror("[2b]	failed");	
 	
 	return EXIT_SUCCESS;
 }
