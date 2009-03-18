@@ -5112,3 +5112,24 @@ asmlinkage long sys_setuserweight(int uid, int weight) {
 	if ( -1 != uid ) free_uid(uptr);
 	return 0;
 }
+
+/**
+ * helper/debug function, prints barrier list to KERN_INFO
+ */
+void displayUserList(runqueue_t *rq)
+{
+        struct list_head *iter;
+        struct user_struct *objPtr;
+        //down(&search_lock);
+
+        printk(KERN_INFO "Current barrier list:\n");
+        __list_for_each(iter, &rq->uwrr_userlist) {
+                printk(KERN_DEBUG "Current list pointer: %p\n", iter);
+                objPtr = list_entry(iter, struct user_struct, uwrr_list);
+                printk(KERN_DEBUG "Current item pointer: %p\n", objPtr);
+                printk(KERN_DEBUG "uid:%d\n"
+                        , objPtr->uid);
+        }
+        //up(&search_lock);
+        printk(KERN_INFO "End of list\n");
+}
