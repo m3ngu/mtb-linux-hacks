@@ -14,7 +14,7 @@ _syscall1(int, getuserweight, int, uid)
 _syscall2(int, setuserweight, int, uid, int, weight)
 
 int main() {
-	int weight_found;
+	int weight_found, status;
 	puts("[1a]	get your own user weight");
 	weight_found = getuserweight(-1);
 	if ( 0 < weight_found ) {
@@ -74,16 +74,26 @@ int main() {
 		
 	uid = getuid();
 	printf("Current UID: %d\n", uid);
-	weight_found = setuserweight(uid,20);
-	if (0 == weight_found) puts("[2a]	unexpected success!");
-	else perror("[2a]	try to set your weight (possibly not as root)");
-
-	puts("[2b]	get your own user weight");
-	weight_found = getuserweight(-1);
-	if ( 0 < weight_found ) {
-		printf("[2b]	got weight %d\n", weight_found);
-	} else 
-		perror("[2b]	failed");	
+	if ( uid ) {
+		/* not root */
+		status = setuserweight(uid,20);
+		if (0 == status) puts("[2a] ERROR weight changed by non-root user");
+		else {
+			perror("[2a]	trying to set own weight as normal user failed");
+			weight_found = getuserweight(uid);
+			fprintf(stderr, "New weight: %d\n", weight_found);
+		}
+	} else {
+		status = setuserweight(uid,20);
+		if (0 == status) puts("[2a] setuserweight apparently successful!");
+		else perror("[2a]	trying to set own weight as root failed");
 	
+		puts("[2b]	get your own user weight");
+		weight_found = getuserweight(-1);
+		if ( 0 < weight_found ) {
+			printf("[2b]	got weight %d\n", weight_found);
+		} else 
+			perror("[2b]	failed");	
+	}
 	return EXIT_SUCCESS;
 }
