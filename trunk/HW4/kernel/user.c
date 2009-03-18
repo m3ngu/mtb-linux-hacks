@@ -24,6 +24,15 @@
 #define __uidhashfn(uid)	(((uid >> UIDHASH_BITS) + uid) & UIDHASH_MASK)
 #define uidhashentry(uid)	(uidhash_table + __uidhashfn((uid)))
 
+#define INIT_PRIO_ARRAY(array) {                	\
+		int k;	 \
+		for (k = 0; k < MAX_PRIO; k++) {		\
+			INIT_LIST_HEAD(array.queue + k);		\
+			__clear_bit(k, array.bitmap);  		\
+		}											\
+		__set_bit(MAX_PRIO, array.bitmap);	    	\
+	}
+
 static kmem_cache_t *uid_cachep;
 static struct list_head uidhash_table[UIDHASH_SZ];
 static DEFINE_SPINLOCK(uidhash_lock);
@@ -35,7 +44,11 @@ struct user_struct root_user = {
 	.sigpending	= ATOMIC_INIT(0),
 	.mq_bytes	= 0,
 	.locked_shm     = 0,
+	
 	.uwrr_weight	= UWRR_DEFAULT_WEIGHT,
+	.uwrr_time_slice = 0, /* XXX is this right? */
+	.uwrr_list = LIST_HEAD_INIT(root_user.uwrr_list),
+/*	.uwrr_tasks = problem  */
 #ifdef CONFIG_KEYS
 	.uid_keyring	= &root_user_keyring,
 	.session_keyring = &root_session_keyring,
@@ -91,8 +104,13 @@ struct user_struct *find_user(uid_t uid)
 
 void free_uid(struct user_struct *up)
 {
+	if ( up && !up->uwrr_tasks.nr_active ) {
+		// synchronization??
+		// list delete up->uwrr_list 
+	}
 	if (up && atomic_dec_and_lock(&up->__count, &uidhash_lock)) {
 		if ( UWRR_DEFAULT_WEIGHT != up->uwrr_weight ) {
+			list_del(&up->uwrr_list);
 			uid_hash_remove(up);
 			key_put(up->uid_keyring);
 			key_put(up->session_keyring);
@@ -124,6 +142,11 @@ struct user_struct * alloc_uid(uid_t uid)
 		atomic_set(&new->sigpending, 0);
 		
 		new->uwrr_weight = UWRR_DEFAULT_WEIGHT;
+		new->uwrr_time_slice = 0; /* XXX erp? */
+		INIT_LIST_HEAD(&new->uwrr_list);
+		
+		INIT_PRIO_ARRAY(new->uwrr_tasks);
+
 
 		new->mq_bytes = 0;
 		new->locked_shm = 0;
@@ -186,6 +209,9 @@ static int __init uid_cache_init(void)
 	spin_lock(&uidhash_lock);
 	uid_hash_insert(&root_user, uidhashentry(0));
 	spin_unlock(&uidhash_lock);
+	/* initialize prio_array_t of root user, because this seems like 
+		the best place to do it */
+	INIT_PRIO_ARRAY(root_user.uwrr_tasks);
 
 	return 0;
 }
