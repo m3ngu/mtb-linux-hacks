@@ -150,7 +150,8 @@
 		(MAX_BONUS / 2 + DELTA((p)) + 1) / MAX_BONUS - 1))
 
 #define TASK_PREEMPTS_CURR(p, rq) \
-	((p)->prio < (rq)->curr->prio)
+	(((p)->prio < (rq)->curr->prio) || \
+	( SCHED_NORMAL == (rq)->curr->policy && SCHED_UWRR == (p)->policy ))
 
 /*
  * task_timeslice() scales user-nice values [ -20 ... 0 ... 19 ]
@@ -636,7 +637,10 @@ static int effective_prio(task_t *p)
  */
 static inline void __activate_task(task_t *p, runqueue_t *rq)
 {
-	enqueue_task(p, rq->active);
+	if (SCHED_UWRR == p->policy) {
+		enqueue_task(p, p->user->uwrr_tasks);
+	} else
+		enqueue_task(p, rq->active);
 	rq->nr_running++;
 }
 
@@ -3386,8 +3390,11 @@ static void __setscheduler(struct task_struct *p, int policy, int prio)
 	BUG_ON(p->array);
 	p->policy = policy;
 	p->rt_priority = prio;
-	if (policy != SCHED_NORMAL)
+	/* XXX do we need to explicitly set prio to 120 here? */
+	if (policy != SCHED_NORMAL && policy != SCHED_UWRR)
 		p->prio = MAX_USER_RT_PRIO-1 - p->rt_priority;
+	else if (policy == SCHED_UWRR)
+		p->prio = UWRR_DEFAULT_PRIO; /* XXX may not be necessary */
 	else
 		p->prio = p->static_prio;
 }
@@ -3430,6 +3437,9 @@ recheck:
 	if ((current->euid != p->euid) && (current->euid != p->uid) &&
 	    !capable(CAP_SYS_NICE))
 		return -EPERM;
+	if (( policy == SCHED_UWRR) ) {
+		/* XXX your argument-checking could be here! */
+	}
 
 	retval = security_task_setscheduler(p, policy, param);
 	if (retval)
