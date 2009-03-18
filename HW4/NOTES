@@ -1,0 +1,41 @@
+New constants in sched.h:
+	SCHED_UWRR
+		set to 4 by professorial fiat
+	UWRR_DEFAULT_WEIGHT  	
+		the default weight for any user
+		set to 10 by professorial fiat
+	UWRR_TASK_PRIO
+		the static priority for a UWRR process
+		should be 120 to achieve the desired effect, we think
+
+new field in struct user_struct:
+	unsigned long uwrr_weight
+	
+new struct (tentatively user_task_list)
+	struct user_struct *
+	prio_array_t
+	struct list_head
+	unsigned int timeslice_counter
+
+new field in struct runqueue:
+	struct list_head user_task_lists
+	
+
+
+void __init sched_init(void)  // sched.c line 4952
+	modify to initialize user_task_lists
+	
+	
+OPEN PROBLEMS:
+	how and when does one delete user_task_list queue elements?
+	should Ben have used find_user instead of alloc_uid in syscalls?
+
+
+Points of discussion:
+	Moving user-tasklist information into struct user_struct (instead of free-standing):
+		Pro: simplifies activation/deactivation
+			simplifies allocation/garbage-collection and initialization
+			
+		Con:
+			makes user_struct kind of big
+			makes it impossible to put UWRR process for one user on multiple CPUs

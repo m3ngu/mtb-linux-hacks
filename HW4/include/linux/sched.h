@@ -364,6 +364,15 @@ struct signal_struct {
 #define UWRR_DEFAULT_WEIGHT 10 	/* the default weight for any user */
 #define UWRR_TASK_PRIO 	120		/* the priority of a UWRR task (default-nice) */
 
+/* this is copied in from sched.c, because we need it here now */
+#define BITMAP_SIZE ((((MAX_PRIO+1+7)/8)+sizeof(long)-1)/sizeof(long))
+
+struct prio_array {
+	unsigned int nr_active;
+	unsigned long bitmap[BITMAP_SIZE];
+	struct list_head queue[MAX_PRIO];
+};
+typedef struct prio_array prio_array_t;
 /*
  * Some day this will be a full-fledged user tracking system..
  */
@@ -376,7 +385,10 @@ struct user_struct {
 	unsigned long mq_bytes;	/* How many bytes can be allocated to mqueue? */
 	unsigned long locked_shm; /* How many pages of mlocked shm ? */
 	
-	unsigned long uwrr_weight;
+	unsigned long    	uwrr_weight;
+	unsigned int    	uwrr_time_slice;
+	struct list_head 	uwrr_list;
+	prio_array_t     	uwrr_tasks;
 
 #ifdef CONFIG_KEYS
 	struct key *uid_keyring;	/* UID specific keyring */
@@ -393,7 +405,7 @@ extern struct user_struct *find_user(uid_t);
 extern struct user_struct root_user;
 #define INIT_USER (&root_user)
 
-typedef struct prio_array prio_array_t;
+
 struct backing_dev_info;
 struct reclaim_state;
 

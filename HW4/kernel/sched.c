@@ -177,17 +177,17 @@ static unsigned int task_timeslice(task_t *p)
 /*
  * These are the runqueue data structures:
  */
-
+/*
 #define BITMAP_SIZE ((((MAX_PRIO+1+7)/8)+sizeof(long)-1)/sizeof(long))
-
+*/
 typedef struct runqueue runqueue_t;
-
+/*
 struct prio_array {
 	unsigned int nr_active;
 	unsigned long bitmap[BITMAP_SIZE];
 	struct list_head queue[MAX_PRIO];
 };
-
+*/
 /*
  * This is the main, per-CPU runqueue data structure.
  *
@@ -223,6 +223,9 @@ struct runqueue {
 	prio_array_t *active, *expired, arrays[2];
 	int best_expired_prio;
 	atomic_t nr_iowait;
+	
+	/* userlist for UWRR scheduler */
+	struct list_head uwrr_userlist;
 
 #ifdef CONFIG_SMP
 	struct sched_domain *sd;
@@ -4962,7 +4965,7 @@ void __init sched_init(void)
 		rq->active = rq->arrays;
 		rq->expired = rq->arrays + 1;
 		rq->best_expired_prio = MAX_PRIO;
-
+		INIT_LIST_HEAD(&rq->uwrr_userlist);
 #ifdef CONFIG_SMP
 		rq->sd = &sched_domain_dummy;
 		rq->cpu_load = 0;
