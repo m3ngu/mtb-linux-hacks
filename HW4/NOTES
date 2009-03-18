@@ -40,3 +40,11 @@ Points of discussion:
 		Con:
 			makes user_struct kind of big
 			makes it impossible to put UWRR process for one user on multiple CPUs
+
+Things to test:
+	existing code doesn't cause massive brain-damage
+	code queues up 
+	
+Things to do:
+	scheduler_tick
+	schedule

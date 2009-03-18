@@ -639,6 +639,9 @@ static inline void __activate_task(task_t *p, runqueue_t *rq)
 {
 	if (SCHED_UWRR == p->policy) {
 		enqueue_task(p, p->user->uwrr_tasks);
+		if( list_empty(p->user->uwrr_list) ) {
+			list_add_tail(&p->user->uwrr_list, &rq->uwrr_userlist);
+		}
 	} else
 		enqueue_task(p, rq->active);
 	rq->nr_running++;
@@ -2432,6 +2435,7 @@ void scheduler_tick(void)
 	}
 
 	/* Task might have expired already, but not scheduled off yet */
+	/* OR it might be a UWRR task, in which case we have a problem */
 	if (p->array != rq->active) {
 		set_tsk_need_resched(p);
 		goto out;
@@ -3394,7 +3398,7 @@ static void __setscheduler(struct task_struct *p, int policy, int prio)
 	if (policy != SCHED_NORMAL && policy != SCHED_UWRR)
 		p->prio = MAX_USER_RT_PRIO-1 - p->rt_priority;
 	else if (policy == SCHED_UWRR)
-		p->prio = UWRR_DEFAULT_PRIO; /* XXX may not be necessary */
+		p->prio = UWRR_TASK_PRIO; /* XXX may not be necessary */
 	else
 		p->prio = p->static_prio;
 }
