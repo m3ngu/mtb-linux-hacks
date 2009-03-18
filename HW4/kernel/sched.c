@@ -638,8 +638,8 @@ static int effective_prio(task_t *p)
 static inline void __activate_task(task_t *p, runqueue_t *rq)
 {
 	if (SCHED_UWRR == p->policy) {
-		enqueue_task(p, p->user->uwrr_tasks);
-		if( list_empty(p->user->uwrr_list) ) {
+		enqueue_task(p, &p->user->uwrr_tasks);
+		if( list_empty(&p->user->uwrr_list) ) {
 			list_add_tail(&p->user->uwrr_list, &rq->uwrr_userlist);
 		}
 	} else
