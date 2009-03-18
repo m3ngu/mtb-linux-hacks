@@ -16,6 +16,7 @@ new struct (tentatively user_task_list)
 	prio_array_t
 	struct list_head
 	unsigned int timeslice_counter
+UPDATE: upon reflection, we decided to put this directly into user_struct
 
 new field in struct runqueue:
 	struct list_head user_task_lists
