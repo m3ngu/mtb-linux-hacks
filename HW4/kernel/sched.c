@@ -182,6 +182,9 @@ static unsigned int task_timeslice(task_t *p)
 #define BITMAP_SIZE ((((MAX_PRIO+1+7)/8)+sizeof(long)-1)/sizeof(long))
 */
 typedef struct runqueue runqueue_t;
+
+/* debugging function for UWRR scheduler */
+void displayUserList(runqueue_t *rq);
 /*
 struct prio_array {
 	unsigned int nr_active;
@@ -3477,6 +3480,7 @@ recheck:
 		} else if (TASK_PREEMPTS_CURR(p, rq))
 			resched_task(rq->curr);
 	}
+	if ( policy == SCHED_UWRR)	displayUserList(rq);
 	task_rq_unlock(rq, &flags);
 	return 0;
 }
@@ -5122,18 +5126,29 @@ asmlinkage long sys_setuserweight(int uid, int weight) {
  */
 void displayUserList(runqueue_t *rq)
 {
-        struct list_head *iter;
-        struct user_struct *objPtr;
-        //down(&search_lock);
+	struct list_head *iter, *task_iter, *user_tasklist;
+	struct user_struct *objPtr;
+	struct task_struct *taskPtr;
+	
 
-        printk(KERN_INFO "Current barrier list:\n");
-        __list_for_each(iter, &rq->uwrr_userlist) {
-                printk(KERN_DEBUG "Current list pointer: %p\n", iter);
-                objPtr = list_entry(iter, struct user_struct, uwrr_list);
-                printk(KERN_DEBUG "Current item pointer: %p\n", objPtr);
-                printk(KERN_DEBUG "uid:%d\n"
-                        , objPtr->uid);
-        }
-        //up(&search_lock);
-        printk(KERN_INFO "End of list\n");
+	printk(KERN_INFO "Current barrier list:\n");
+	__list_for_each(iter, &rq->uwrr_userlist) {
+		printk(KERN_DEBUG "Current list pointer: %p\n", iter);
+		objPtr = list_entry(iter, struct user_struct, uwrr_list);
+		printk(KERN_DEBUG "Current item pointer: %p\n", objPtr);
+		printk(KERN_DEBUG "uid:%d\n", objPtr->uid);
+		user_tasklist = objPtr->uwrr_tasks.queue + UWRR_TASK_PRIO;
+		printk(KERN_DEBUG "nr_active for this user queue is %d\n",
+			objPtr->uwrr_tasks.nr_active);
+		if ( list_empty(user_tasklist) ) {
+			printk(KERN_DEBUG "No tasks for this user\n");	
+		} else {
+			__list_for_each(task_iter, user_tasklist) {
+				printk(KERN_DEBUG "Current task-list pointer: %p\n", task_iter);
+				taskPtr = list_entry(task_iter, struct task_struct, run_list);
+				printk(KERN_DEBUG "\tpid: %d\n", taskPtr->tgid);
+			}
+		}
+	}
+	printk(KERN_INFO "End of list\n");
 }
