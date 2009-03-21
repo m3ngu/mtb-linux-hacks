@@ -5131,7 +5131,7 @@ void displayUserList(runqueue_t *rq)
 	struct task_struct *taskPtr;
 	
 
-	printk(KERN_INFO "Current barrier list:\n");
+	printk(KERN_DEBUG "Current user task list:\n");
 	__list_for_each(iter, &rq->uwrr_userlist) {
 		printk(KERN_DEBUG "Current list pointer: %p\n", iter);
 		objPtr = list_entry(iter, struct user_struct, uwrr_list);
