@@ -33,7 +33,8 @@ do
 	## TODO: We can't use chrt, we should have our own C program that takes
 	## a PID as argument and changes the policy to UWRR
 	echo "Switching ${test_pid} to UWRR (prio=50)"
-	chrt -r -p 50 ${test_pid}
+	##chrt -r -p 50 ${test_pid}
+	sudo ./change_scheduler ${test_pid}
 	
 	sleep 1
 
