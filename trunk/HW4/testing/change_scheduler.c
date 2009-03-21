@@ -9,7 +9,7 @@
  * policy to UWRR. Should run that program as root
  */
 
-#define DEF_PRIO	120
+#define DEF_PRIO	50  /* Needs to be between 0 and 99 */
 #define SCHED_UWRR	4
 
 int main (int argc, char *argv[]) {
