@@ -153,10 +153,6 @@
 	(((p)->prio < (rq)->curr->prio) || \
 	( SCHED_NORMAL == (rq)->curr->policy && SCHED_UWRR == (p)->policy ))
 
-/* debugging function for UWRR scheduler */
-void displayUserList(runqueue_t *rq);
-
-
 /*
  * task_timeslice() scales user-nice values [ -20 ... 0 ... 19 ]
  * to time slice values: [800ms ... 100ms ... 5ms]
@@ -186,6 +182,9 @@ static unsigned int task_timeslice(task_t *p)
 #define BITMAP_SIZE ((((MAX_PRIO+1+7)/8)+sizeof(long)-1)/sizeof(long))
 */
 typedef struct runqueue runqueue_t;
+
+/* debugging function for UWRR scheduler */
+void displayUserList(runqueue_t *rq);
 /*
 struct prio_array {
 	unsigned int nr_active;
