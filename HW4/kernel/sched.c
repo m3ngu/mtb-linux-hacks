@@ -2678,8 +2678,6 @@ EXPORT_SYMBOL(sub_preempt_count);
 
 #endif
 
-void dummy_stupidity(int i); 
-
 /*
  * schedule() is the main scheduler function.
  */
@@ -2801,7 +2799,6 @@ go_idle:
 	} else
 		schedstat_inc(rq, sched_noswitch);
 
-	if (!tmp_running) dummy_stupidity(idx);
 	idx = sched_find_first_bit(array->bitmap);
 	/* insert check here: do we run a UWRR process? */
 	/* true if : idx >= 100 AND there is such a process */
@@ -2858,9 +2855,6 @@ switch_tasks:
 }
 
 EXPORT_SYMBOL(schedule);
-void dummy_stupidity(int i) {
-//	printk(KERN_INFO "We are in the dummy function, with value %d\n", i);
-}
 
 #ifdef CONFIG_PREEMPT
 /*
