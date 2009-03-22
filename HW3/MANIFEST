@@ -1,5 +1,0 @@
-arch/i386/kernel/entry.S
-arch/i386/kernel/Makefile
-include/asm-i386/unistd.h
-include/linux/syscalls.h
-arch/i386/kernel/barrier.c
