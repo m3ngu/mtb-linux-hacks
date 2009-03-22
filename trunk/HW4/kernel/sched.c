@@ -642,7 +642,7 @@ static int effective_prio(task_t *p)
 static inline void __activate_task(task_t *p, runqueue_t *rq)
 {
 	if (SCHED_UWRR == p->policy) {
-		printk(KERN_INFO "activation for UWRR for %d in progress\n", p->tgid);
+		//printk(KERN_INFO "activation for UWRR for %d in progress\n", p->tgid);
 		rq->uwrr_running++;
 		enqueue_task(p, &p->user->uwrr_tasks);
 		if( list_empty(&p->user->uwrr_list) ) {
@@ -2859,7 +2859,7 @@ switch_tasks:
 
 EXPORT_SYMBOL(schedule);
 void dummy_stupidity(int i) {
-	printk(KERN_INFO "We are in the dummy function, with value %d\n", i);
+//	printk(KERN_INFO "We are in the dummy function, with value %d\n", i);
 }
 
 #ifdef CONFIG_PREEMPT
@@ -3464,7 +3464,7 @@ recheck:
 	    !capable(CAP_SYS_NICE))
 		return -EPERM;
 	if (( policy == SCHED_UWRR) ) {
-		printk(KERN_INFO "Trying to schedule process %d for UWRR\n", p->tgid);
+		// printk(KERN_INFO "Trying to schedule process %d for UWRR\n", p->tgid);
 		/* XXX your argument-checking could be here! */
 	}
 
@@ -3488,27 +3488,27 @@ recheck:
 	oldprio = p->prio;
 	__setscheduler(p, policy, param->sched_priority);
 	if (array) {
-		printk(KERN_INFO "setscheduler attempting to activate process %d\n", p->tgid);
+//		printk(KERN_INFO "setscheduler attempting to activate process %d\n", p->tgid);
 		__activate_task(p, rq);
 		/*
 		 * Reschedule if we are currently running on this runqueue and
 		 * our priority decreased, or if we are not currently running on
 		 * this runqueue and our priority is higher than the current's
 		 */
-		printk(KERN_INFO "setscheduler finished activation\n");
+	//	printk(KERN_INFO "setscheduler finished activation\n");
 		if (task_running(rq, p)) {
-			printk(KERN_INFO "setscheduler in task_running branch\n");
+	//		printk(KERN_INFO "setscheduler in task_running branch\n");
 			if (p->prio > oldprio)
 				resched_task(rq->curr);
 		} else if (TASK_PREEMPTS_CURR(p, rq)) {
-			printk(KERN_INFO "setscheduler in preempt branch\n");
+	//		printk(KERN_INFO "setscheduler in preempt branch\n");
 			resched_task(rq->curr);
 		} else {
-			printk(KERN_INFO "setscheduler took neither reschedule branch\n");
+	//		printk(KERN_INFO "setscheduler took neither reschedule branch\n");
 		}
 	}
-	if ( policy == SCHED_UWRR)	displayUserList(rq);
 	task_rq_unlock(rq, &flags);
+	if ( policy == SCHED_UWRR)	displayUserList(rq);
 	printk(KERN_INFO "exiting setscheduler\n");
 	return 0;
 }
@@ -5160,7 +5160,7 @@ void displayUserList(runqueue_t *rq)
 	struct task_struct *taskPtr;
 	
 
-	printk(KERN_INFO "Current user task list (should contain %d PIDs):\n",
+	printk(KERN_INFO "Current user task list (should contain %lud PIDs):\n",
 		rq->uwrr_running);
 	list_for_each_safe(iter, tmp, &rq->uwrr_userlist) {
 		printk(KERN_INFO "Current list pointer: %p\n", iter);
