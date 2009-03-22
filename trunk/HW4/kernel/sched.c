@@ -229,6 +229,7 @@ struct runqueue {
 	atomic_t nr_iowait;
 	
 	/* userlist for UWRR scheduler */
+	unsigned long uwrr_running;
 	struct list_head uwrr_userlist;
 
 #ifdef CONFIG_SMP
@@ -641,6 +642,8 @@ static int effective_prio(task_t *p)
 static inline void __activate_task(task_t *p, runqueue_t *rq)
 {
 	if (SCHED_UWRR == p->policy) {
+		printk(KERN_INFO "activation for UWRR for %d in progress\n", p->tgid);
+		rq->uwrr_running++;
 		enqueue_task(p, &p->user->uwrr_tasks);
 		if( list_empty(&p->user->uwrr_list) ) {
 			list_add_tail(&p->user->uwrr_list, &rq->uwrr_userlist);
@@ -775,6 +778,10 @@ static void activate_task(task_t *p, runqueue_t *rq, int local)
 static void deactivate_task(struct task_struct *p, runqueue_t *rq)
 {
 	rq->nr_running--;
+	if (SCHED_UWRR == p->policy) {
+		 /* printk(KERN_INFO "deactivation for UWRR for %d in progress\n", p->tgid); */
+		rq->uwrr_running--;
+	}
 	dequeue_task(p, p->array);
 	p->array = NULL;
 }
@@ -1246,6 +1253,7 @@ void fastcall wake_up_new_task(task_t * p, unsigned long clone_flags)
 			 * do child-runs-first in anticipation of an exec. This
 			 * usually avoids a lot of COW overhead.
 			 */
+			 /* XXX is this something we need to worry about? */
 			if (unlikely(!current->array))
 				__activate_task(p, rq);
 			else {
@@ -2670,6 +2678,8 @@ EXPORT_SYMBOL(sub_preempt_count);
 
 #endif
 
+void dummy_stupidity(int i); 
+
 /*
  * schedule() is the main scheduler function.
  */
@@ -2747,10 +2757,11 @@ need_resched_nonpreemptible:
 	}
 
 	cpu = smp_processor_id();
-	if (unlikely(!rq->nr_running)) {
+	unsigned long tmp_running = rq->nr_running - rq->uwrr_running;
+	if (unlikely(!tmp_running)) {
 go_idle:
 		idle_balance(cpu, rq);
-		if (!rq->nr_running) {
+		if (!tmp_running) {
 			next = rq->idle;
 			rq->expired_timestamp = 0;
 			wake_sleeping_dependent(cpu, rq);
@@ -2759,7 +2770,7 @@ go_idle:
 			 * the runqueue, so break out if we got new
 			 * tasks meanwhile:
 			 */
-			if (!rq->nr_running)
+			if (!tmp_running)
 				goto switch_tasks;
 		}
 	} else {
@@ -2772,7 +2783,7 @@ go_idle:
 		 * lock, hence go into the idle loop if the rq went
 		 * empty meanwhile:
 		 */
-		if (unlikely(!rq->nr_running))
+		if (unlikely(!tmp_running))
 			goto go_idle;
 	}
 
@@ -2790,7 +2801,12 @@ go_idle:
 	} else
 		schedstat_inc(rq, sched_noswitch);
 
+	if (!tmp_running) dummy_stupidity(idx);
 	idx = sched_find_first_bit(array->bitmap);
+	/* insert check here: do we run a UWRR process? */
+	/* true if : idx >= 100 AND there is such a process */
+	/* if ( idx >= 100 && rq->uwrr_running > 0 ) {... } */
+	
 	queue = array->queue + idx;
 	next = list_entry(queue->next, task_t, run_list);
 
@@ -2842,6 +2858,9 @@ switch_tasks:
 }
 
 EXPORT_SYMBOL(schedule);
+void dummy_stupidity(int i) {
+	printk(KERN_INFO "We are in the dummy function, with value %d\n", i);
+}
 
 #ifdef CONFIG_PREEMPT
 /*
@@ -3445,6 +3464,7 @@ recheck:
 	    !capable(CAP_SYS_NICE))
 		return -EPERM;
 	if (( policy == SCHED_UWRR) ) {
+		printk(KERN_INFO "Trying to schedule process %d for UWRR\n", p->tgid);
 		/* XXX your argument-checking could be here! */
 	}
 
@@ -3468,20 +3488,28 @@ recheck:
 	oldprio = p->prio;
 	__setscheduler(p, policy, param->sched_priority);
 	if (array) {
+		printk(KERN_INFO "setscheduler attempting to activate process %d\n", p->tgid);
 		__activate_task(p, rq);
 		/*
 		 * Reschedule if we are currently running on this runqueue and
 		 * our priority decreased, or if we are not currently running on
 		 * this runqueue and our priority is higher than the current's
 		 */
+		printk(KERN_INFO "setscheduler finished activation\n");
 		if (task_running(rq, p)) {
+			printk(KERN_INFO "setscheduler in task_running branch\n");
 			if (p->prio > oldprio)
 				resched_task(rq->curr);
-		} else if (TASK_PREEMPTS_CURR(p, rq))
+		} else if (TASK_PREEMPTS_CURR(p, rq)) {
+			printk(KERN_INFO "setscheduler in preempt branch\n");
 			resched_task(rq->curr);
+		} else {
+			printk(KERN_INFO "setscheduler took neither reschedule branch\n");
+		}
 	}
 	if ( policy == SCHED_UWRR)	displayUserList(rq);
 	task_rq_unlock(rq, &flags);
+	printk(KERN_INFO "exiting setscheduler\n");
 	return 0;
 }
 EXPORT_SYMBOL_GPL(sched_setscheduler);
@@ -4984,6 +5012,7 @@ void __init sched_init(void)
 		rq->expired = rq->arrays + 1;
 		rq->best_expired_prio = MAX_PRIO;
 		INIT_LIST_HEAD(&rq->uwrr_userlist);
+		rq->uwrr_running = 0;
 #ifdef CONFIG_SMP
 		rq->sd = &sched_domain_dummy;
 		rq->cpu_load = 0;
@@ -5126,27 +5155,28 @@ asmlinkage long sys_setuserweight(int uid, int weight) {
  */
 void displayUserList(runqueue_t *rq)
 {
-	struct list_head *iter, *task_iter, *user_tasklist;
+	struct list_head *iter, *task_iter, *user_tasklist, *tmp;
 	struct user_struct *objPtr;
 	struct task_struct *taskPtr;
 	
 
-	printk(KERN_DEBUG "Current user task list:\n");
-	__list_for_each(iter, &rq->uwrr_userlist) {
-		printk(KERN_DEBUG "Current list pointer: %p\n", iter);
+	printk(KERN_INFO "Current user task list (should contain %d PIDs):\n",
+		rq->uwrr_running);
+	list_for_each_safe(iter, tmp, &rq->uwrr_userlist) {
+		printk(KERN_INFO "Current list pointer: %p\n", iter);
 		objPtr = list_entry(iter, struct user_struct, uwrr_list);
-		printk(KERN_DEBUG "Current item pointer: %p\n", objPtr);
-		printk(KERN_DEBUG "uid:%d\n", objPtr->uid);
+		printk(KERN_INFO "Current item pointer: %p\n", objPtr);
+		printk(KERN_INFO "uid:%d\n", objPtr->uid);
 		user_tasklist = objPtr->uwrr_tasks.queue + UWRR_TASK_PRIO;
-		printk(KERN_DEBUG "nr_active for this user queue is %d\n",
+		printk(KERN_INFO "nr_active for this user queue is %d\n",
 			objPtr->uwrr_tasks.nr_active);
 		if ( list_empty(user_tasklist) ) {
-			printk(KERN_DEBUG "No tasks for this user\n");	
+			printk(KERN_INFO "No tasks for this user\n");	
 		} else {
-			__list_for_each(task_iter, user_tasklist) {
-				printk(KERN_DEBUG "Current task-list pointer: %p\n", task_iter);
+			list_for_each(task_iter, user_tasklist) {
+				printk(KERN_INFO "Current task-list pointer: %p\n", task_iter);
 				taskPtr = list_entry(task_iter, struct task_struct, run_list);
-				printk(KERN_DEBUG "\tpid: %d\n", taskPtr->tgid);
+				printk(KERN_INFO "\tpid: %d\n", taskPtr->tgid);
 			}
 		}
 	}
