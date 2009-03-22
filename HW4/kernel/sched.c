@@ -2474,6 +2474,19 @@ void scheduler_tick(void)
 		}
 		goto out_unlock;
 	}
+	if ( SCHED_UWRR == p->policy ) {
+		if ( !--p->time_slice ) {
+			p->time_slice = task_timeslice(p); /* XXX which should be checked */
+			p->first_time_slice = 0;
+			set_tsk_need_resched(p);
+			requeue_task(p,p->array);
+		}
+		if ( !--p->user->uwrr_time_slice ) {
+			p->user->uwrr_time_slice = 100 * p->user->uwrr_weight;
+			set_tsk_need_resched(p);
+			list_move_tail(&p->user->uwrr_list, &rq->uwrr_userlist);
+		}
+	}
 	if (!--p->time_slice) {
 		dequeue_task(p, rq->active);
 		set_tsk_need_resched(p);
@@ -2755,7 +2768,7 @@ need_resched_nonpreemptible:
 	}
 
 	cpu = smp_processor_id();
-	unsigned long tmp_running = rq->nr_running - rq->uwrr_running;
+	unsigned long tmp_running = rq->nr_running; // - rq->uwrr_running;
 	if (unlikely(!tmp_running)) {
 go_idle:
 		idle_balance(cpu, rq);
@@ -2803,10 +2816,23 @@ go_idle:
 	/* insert check here: do we run a UWRR process? */
 	/* true if : idx >= 100 AND there is such a process */
 	/* if ( idx >= 100 && rq->uwrr_running > 0 ) {... } */
-	
-	queue = array->queue + idx;
+	if ( MAX_RT_PRIO <= idx && 0 < rq->uwrr_running ) {
+		// it's showtime!
+		struct list_head *first_user = rq->uwrr_userlist.next;
+		struct user_struct *uPtr;
+		while (1) {
+			uPtr = list_entry(first_user, struct user_struct, uwrr_list);
+			if ( !uPtr->uwrr_tasks.nr_active ) { 
+				list_del_init(first_user);
+			} else {
+				queue = uPtr->uwrr_tasks.queue + UWRR_TASK_PRIO;				
+				break;
+			}
+		}
+	} else {
+		queue = array->queue + idx;
+	}
 	next = list_entry(queue->next, task_t, run_list);
-
 	if (!rt_task(next) && next->activated > 0) {
 		unsigned long long delta = now - next->timestamp;
 
