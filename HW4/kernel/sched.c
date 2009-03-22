@@ -5166,17 +5166,17 @@ void displayUserList(runqueue_t *rq)
 		printk(KERN_INFO "Current list pointer: %p\n", iter);
 		objPtr = list_entry(iter, struct user_struct, uwrr_list);
 		printk(KERN_INFO "Current item pointer: %p\n", objPtr);
-		printk(KERN_INFO "uid:%d\n", objPtr->uid);
+		printk(KERN_INFO "  uid:%d\n", objPtr->uid);
 		user_tasklist = objPtr->uwrr_tasks.queue + UWRR_TASK_PRIO;
 		printk(KERN_INFO "nr_active for this user queue is %d\n",
 			objPtr->uwrr_tasks.nr_active);
 		if ( list_empty(user_tasklist) ) {
-			printk(KERN_INFO "No tasks for this user\n");	
+			printk(KERN_INFO "  No tasks for this user\n");	
 		} else {
 			list_for_each(task_iter, user_tasklist) {
-				printk(KERN_INFO "Current task-list pointer: %p\n", task_iter);
+				printk(KERN_INFO "  Current task-list pointer: %p\n", task_iter);
 				taskPtr = list_entry(task_iter, struct task_struct, run_list);
-				printk(KERN_INFO "\tpid: %d\n", taskPtr->tgid);
+				printk(KERN_INFO "    pid: %d\n", taskPtr->tgid);
 			}
 		}
 	}
