@@ -110,7 +110,7 @@ void free_uid(struct user_struct *up)
 		// list delete up->uwrr_list 
 	}
 	if (up && atomic_dec_and_lock(&up->__count, &uidhash_lock)) {
-		if ( UWRR_DEFAULT_WEIGHT != up->uwrr_weight ) {
+		if ( UWRR_DEFAULT_WEIGHT == up->uwrr_weight ) {
 			list_del(&up->uwrr_list);
 			uid_hash_remove(up);
 			key_put(up->uid_keyring);
