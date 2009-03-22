@@ -29,6 +29,7 @@
 		for (k = 0; k < MAX_PRIO; k++) {		\
 			INIT_LIST_HEAD(array.queue + k);		\
 			__clear_bit(k, array.bitmap);  		\
+			array.nr_active = 0;				\
 		}											\
 		__set_bit(MAX_PRIO, array.bitmap);	    	\
 	}
