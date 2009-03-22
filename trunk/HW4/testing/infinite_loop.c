@@ -1,11 +1,13 @@
 #include <sched.h> 
 #include <errno.h>
 #include <time.h>
+#include <stdio.h>
 
 #define SECONDS_TO_RUN 30
 
 int main(){
-	
+	int policy;
+	policy = sched_getscheduler(0);
 	// TODO: Now, I'm thinking that we should not set the scheduling
 	// policy here.  Scheduling policy can only be changed by root, but
 	// we want to call this program with alice, bob, carol, etc.
@@ -35,6 +37,11 @@ int main(){
 	short seconds_passed = 0;
 	
 	while(seconds_passed < SECONDS_TO_RUN) {
+		int new_policy = sched_getscheduler(0);
+		if ( new_policy != policy ) {
+			printf("Policy changed from %d to %d\n", policy, new_policy);
+			policy = new_policy;
+		}
 		curr_time = clock();
 		if (curr_time - prev_time > CLOCKS_PER_SEC) {
 			seconds_passed++;
