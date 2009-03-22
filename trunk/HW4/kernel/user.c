@@ -47,7 +47,7 @@ struct user_struct root_user = {
 	.locked_shm     = 0,
 	
 	.uwrr_weight	= UWRR_DEFAULT_WEIGHT,
-	.uwrr_time_slice = 0, /* XXX is this right? */
+	.uwrr_time_slice = UWRR_DEFAULT_WEIGHT * 100, /* XXX is this right? */
 	.uwrr_list = LIST_HEAD_INIT(root_user.uwrr_list),
 /*	.uwrr_tasks = problem  */
 #ifdef CONFIG_KEYS
@@ -143,7 +143,7 @@ struct user_struct * alloc_uid(uid_t uid)
 		atomic_set(&new->sigpending, 0);
 		
 		new->uwrr_weight = UWRR_DEFAULT_WEIGHT;
-		new->uwrr_time_slice = 0; /* XXX erp? */
+		new->uwrr_time_slice = UWRR_DEFAULT_WEIGHT * 100; /* XXX erp? */
 		INIT_LIST_HEAD(&new->uwrr_list);
 		
 		INIT_PRIO_ARRAY(new->uwrr_tasks);

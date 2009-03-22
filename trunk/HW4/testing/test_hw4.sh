@@ -17,18 +17,19 @@ echo "Switching event handling kernel thread to FIFO (prio=99)"
 event_pid=`ps -e -opid,comm | grep events | nawk '{ print $1 }'`
 chrt -f -p 99 ${event_pid}
 
-for u in alice bob carol
+for u in alice bob carol alice
 do
 	
-	echo "Adding user ${u}..."
-	useradd ${u}
+	#echo "Adding user ${u}..."
+	#useradd ${u}
 	
 	sleep 1
 	
 	echo "Submitting test_hw4 to the background as user ${u}..."
 	(sudo -u ${u} ./inf-loop) &
 	
-	test_pid=`ps -u ${u} -opid,comm | grep inf-loop | tail -1 | nawk '{ print $1 }'`
+	#test_pid=`ps -u ${u} -opid,comm | grep inf-loop | tail -1 | nawk '{ print $1 }'`
+	test_pid=$!
 	
 	## TODO: We can't use chrt, we should have our own C program that takes
 	## a PID as argument and changes the policy to UWRR

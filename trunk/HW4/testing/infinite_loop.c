@@ -2,8 +2,9 @@
 #include <errno.h>
 #include <time.h>
 #include <stdio.h>
+#include <unistd.h>
 
-#define SECONDS_TO_RUN 30
+#define SECONDS_TO_RUN 10
 
 int main(){
 	int policy;
@@ -39,7 +40,7 @@ int main(){
 	while(seconds_passed < SECONDS_TO_RUN) {
 		int new_policy = sched_getscheduler(0);
 		if ( new_policy != policy ) {
-			printf("Policy changed from %d to %d\n", policy, new_policy);
+			printf("PID %d: Policy changed from %d to %d\n", getpid(), policy, new_policy);
 			policy = new_policy;
 		}
 		curr_time = clock();

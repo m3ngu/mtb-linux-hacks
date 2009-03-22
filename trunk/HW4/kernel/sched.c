@@ -2447,7 +2447,7 @@ void scheduler_tick(void)
 
 	/* Task might have expired already, but not scheduled off yet */
 	/* OR it might be a UWRR task, in which case we have a problem */
-	if (p->array != rq->active) {
+	if (p->array != rq->active && SCHED_UWRR != p->policy) {
 		set_tsk_need_resched(p);
 		goto out;
 	}
@@ -2486,6 +2486,7 @@ void scheduler_tick(void)
 			set_tsk_need_resched(p);
 			list_move_tail(&p->user->uwrr_list, &rq->uwrr_userlist);
 		}
+		goto out_unlock;
 	}
 	if (!--p->time_slice) {
 		dequeue_task(p, rq->active);
