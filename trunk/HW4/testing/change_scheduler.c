@@ -1,4 +1,3 @@
-/*#include "linux/sched.h"  Causes a lot of warnings */
 #include <sched.h>
 #include <errno.h>
 #include <stdio.h>
@@ -9,25 +8,24 @@
  * policy to UWRR. Should run that program as root
  */
 
-#define DEF_PRIO	50  /* Needs to be between 0 and 99 */
-#define SCHED_UWRR	4
-
 int main (int argc, char *argv[]) {
 	
 	/* Check parameter */
-	if (argc != 2) {
-		printf("Usage: %s pid\n", argv[0]);
+	if (argc != 4) {
+		printf("Usage: %s pid policy prio\n", argv[0]);
 		return -EINVAL;
 	}
 	
-	/* Do we need to check this ? */
-	int pid = atoi(argv[1]);
+	/* Do we need to check these ? */
+	int pid    = atoi(argv[1]);
+	int policy = atoi(argv[2]);
+	int prio   = atoi(argv[3]);
 	
-	struct sched_param param = { .sched_priority = DEF_PRIO };
+	struct sched_param param = { .sched_priority = prio };
 	int rc;
 	
 	/* SCHED_UWRR = 4 */
-	rc = sched_setscheduler(pid, SCHED_UWRR, &param);
+	rc = sched_setscheduler(pid, policy, &param);
 	
 	if (rc) {
 		perror("Couldn't change scheduling policy");
