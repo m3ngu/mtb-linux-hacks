@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#define SECONDS_TO_RUN 10
+#define SECONDS_TO_RUN 20
 
 int main(){
 	int policy;
