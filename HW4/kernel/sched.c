@@ -2769,11 +2769,11 @@ need_resched_nonpreemptible:
 	}
 
 	cpu = smp_processor_id();
-	unsigned long tmp_running = rq->nr_running; // - rq->uwrr_running;
-	if (unlikely(!tmp_running)) {
+
+	if (unlikely(!rq->nr_running)) {
 go_idle:
 		idle_balance(cpu, rq);
-		if (!tmp_running) {
+		if (!rq->nr_running) {
 			next = rq->idle;
 			rq->expired_timestamp = 0;
 			wake_sleeping_dependent(cpu, rq);
@@ -2782,7 +2782,7 @@ go_idle:
 			 * the runqueue, so break out if we got new
 			 * tasks meanwhile:
 			 */
-			if (!tmp_running)
+			if (!rq->nr_running)
 				goto switch_tasks;
 		}
 	} else {
@@ -2795,12 +2795,12 @@ go_idle:
 		 * lock, hence go into the idle loop if the rq went
 		 * empty meanwhile:
 		 */
-		if (unlikely(!tmp_running))
+		if (unlikely(!rq->nr_running))
 			goto go_idle;
 	}
 
 	array = rq->active;
-	if (unlikely(!array->nr_active)) {
+	if (unlikely(!array->nr_active && !rq->uwrr_running)) {
 		/*
 		 * Switch the active and expired arrays.
 		 */
@@ -2813,7 +2813,8 @@ go_idle:
 	} else
 		schedstat_inc(rq, sched_noswitch);
 
-	idx = sched_find_first_bit(array->bitmap);
+	if ( likely(array->nr_active) ) idx = sched_find_first_bit(array->bitmap);
+	else idx = MAX_PRIO;
 	/* insert check here: do we run a UWRR process? */
 	/* true if : idx >= 100 AND there is such a process */
 	/* if ( idx >= 100 && rq->uwrr_running > 0 ) {... } */
@@ -2821,9 +2822,9 @@ go_idle:
 		// it's showtime!
 		struct list_head *first_user = rq->uwrr_userlist.next;
 		struct user_struct *uPtr;
-		while (1) {
+		while (1) { /* XXX should be made into a goto with an unlikely() tag */
 			uPtr = list_entry(first_user, struct user_struct, uwrr_list);
-			if ( !uPtr->uwrr_tasks.nr_active ) { 
+			if ( unlikely( !uPtr->uwrr_tasks.nr_active ) ) { 
 				list_del_init(first_user);
 			} else {
 				queue = uPtr->uwrr_tasks.queue + UWRR_TASK_PRIO;				
@@ -2834,7 +2835,7 @@ go_idle:
 		queue = array->queue + idx;
 	}
 	next = list_entry(queue->next, task_t, run_list);
-	if (!rt_task(next) && next->activated > 0) {
+	if (!rt_task(next) && SCHED_UWRR != next->policy && next->activated > 0) {
 		unsigned long long delta = now - next->timestamp;
 
 		if (next->activated == 1)
