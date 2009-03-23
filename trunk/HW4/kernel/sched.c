@@ -2820,9 +2820,12 @@ go_idle:
 	/* if ( idx >= 100 && rq->uwrr_running > 0 ) {... } */
 	if ( MAX_RT_PRIO <= idx && 0 < rq->uwrr_running ) {
 		// it's showtime!
-		struct list_head *first_user = rq->uwrr_userlist.next;
-		struct user_struct *uPtr;
 		while (1) { /* XXX should be made into a goto with an unlikely() tag */
+			struct list_head *first_user = rq->uwrr_userlist.next;
+			struct user_struct *uPtr;
+			if (first_user == &rq->uwrr_userlist) { 
+				printk(KERN_ERR "those about to deadlock salute you!");
+			}
 			uPtr = list_entry(first_user, struct user_struct, uwrr_list);
 			if ( unlikely( !uPtr->uwrr_tasks.nr_active ) ) { 
 				list_del_init(first_user);

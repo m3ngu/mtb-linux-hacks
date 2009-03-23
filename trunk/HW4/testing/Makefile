@@ -12,6 +12,9 @@ all: test-syscalls change-scheduler inf-loop
 test-syscalls: syscall_tests.c
 	$(CC) $(CFLAGS) -I /usr/src/linux-2.6.11.12$(TREE_TAG)/include -o $@ $^ 
 
+change-weight: change_userweight.c
+	$(CC) $(CFLAGS) -I /usr/src/linux-2.6.11.12$(TREE_TAG)/include -o $@ $^ 
+
 change-scheduler: change_scheduler.c
 	$(CC) $(CFLAGS) -o $@ $^ 
 
