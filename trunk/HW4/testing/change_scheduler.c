@@ -29,6 +29,8 @@ int main (int argc, char *argv[]) {
 	
 	if (rc) {
 		perror("Couldn't change scheduling policy");
+	} else {
+		fprintf(stderr, "Changed scheduling policy for %d\n", pid);
 	}
 	
 	return rc;
