@@ -150,8 +150,11 @@
 		(MAX_BONUS / 2 + DELTA((p)) + 1) / MAX_BONUS - 1))
 
 #define TASK_PREEMPTS_CURR(p, rq) \
-	(((p)->prio < (rq)->curr->prio) || \
-	( SCHED_NORMAL == (rq)->curr->policy && SCHED_UWRR == (p)->policy ))
+	(SCHED_UWRR == (p)->policy ?  \
+		SCHED_NORMAL == (rq)->curr->policy \
+		: ( SCHED_UWRR == (rq)->curr->policy ? rt_task(p) : \
+		( (p)->prio < (rq)->curr->prio ) ) )
+
 
 /*
  * task_timeslice() scales user-nice values [ -20 ... 0 ... 19 ]
@@ -228,9 +231,6 @@ struct runqueue {
 	int best_expired_prio;
 	atomic_t nr_iowait;
 	
-	/* userlist for UWRR scheduler */
-	unsigned long uwrr_running;
-	struct list_head uwrr_userlist;
 
 #ifdef CONFIG_SMP
 	struct sched_domain *sd;
@@ -284,6 +284,10 @@ struct runqueue {
 	/* sched_balance_exec() stats */
 	unsigned long sbe_cnt;
 #endif
+	/* userlist for UWRR scheduler */
+	/* moved to the end just in case it mattered, which it obviously didn't */
+	unsigned long uwrr_running;
+	struct list_head uwrr_userlist;
 };
 
 static DEFINE_PER_CPU(struct runqueue, runqueues);
@@ -623,7 +627,7 @@ static int effective_prio(task_t *p)
 {
 	int bonus, prio;
 
-	if (rt_task(p))
+	if (rt_task(p) || SCHED_UWRR == p->policy) /* UWRR tasks never change prio*/
 		return p->prio;
 
 	bonus = CURRENT_BONUS(p) - MAX_BONUS / 2;
@@ -1253,7 +1257,8 @@ void fastcall wake_up_new_task(task_t * p, unsigned long clone_flags)
 			 * do child-runs-first in anticipation of an exec. This
 			 * usually avoids a lot of COW overhead.
 			 */
-			 /* XXX is this something we need to worry about? */
+			 /* XXX is this something we need to worry about? 
+			 	well, if so I think I fixed it... */
 			if (unlikely(!current->array))
 				__activate_task(p, rq);
 			else {
@@ -1262,6 +1267,7 @@ void fastcall wake_up_new_task(task_t * p, unsigned long clone_flags)
 				p->array = current->array;
 				p->array->nr_active++;
 				rq->nr_running++;
+				if (SCHED_UWRR == p->policy) rq->uwrr_running++;
 			}
 			set_need_resched();
 		} else
@@ -2609,12 +2615,29 @@ static inline int dependent_sleeper(int this_cpu, runqueue_t *this_rq)
 	if (!this_rq->nr_running)
 		goto out_unlock;
 	array = this_rq->active;
-	if (!array->nr_active)
+	if (!array->nr_active && !this_rq->uwrr_running)
 		array = this_rq->expired;
-	BUG_ON(!array->nr_active);
-
-	p = list_entry(array->queue[sched_find_first_bit(array->bitmap)].next,
-		task_t, run_list);
+	BUG_ON(!array->nr_active && !this_rq->uwrr_running);
+	
+	int idx = array->nr_active ? sched_find_first_bit(array->bitmap) : MAX_PRIO;
+	if ( MAX_RT_PRIO > idx || ! this_rq->uwrr_running ) 
+		p = list_entry(array->queue[idx].next, task_t, run_list);
+	else {
+		while (1) { /* XXX see note the other place this exact code appears */
+			struct list_head *first_user = this_rq->uwrr_userlist.next;
+			struct user_struct *uPtr;
+			if (first_user == &this_rq->uwrr_userlist) { 
+				printk(KERN_ERR "those about to deadlock salute you!");
+			}
+			uPtr = list_entry(first_user, struct user_struct, uwrr_list);
+			if ( unlikely( !uPtr->uwrr_tasks.nr_active ) ) { 
+				list_del_init(first_user);
+			} else {
+				p = list_entry(uPtr->uwrr_tasks.queue[UWRR_TASK_PRIO].next, task_t, run_list);
+				break;
+			}
+		}
+	}
 
 	for_each_cpu_mask(i, sibling_map) {
 		runqueue_t *smt_rq = cpu_rq(i);
@@ -3444,8 +3467,11 @@ static void __setscheduler(struct task_struct *p, int policy, int prio)
 	/* XXX do we need to explicitly set prio to 120 here? */
 	if (policy != SCHED_NORMAL && policy != SCHED_UWRR)
 		p->prio = MAX_USER_RT_PRIO-1 - p->rt_priority;
-	else if (policy == SCHED_UWRR)
+	else if (policy == SCHED_UWRR) {
 		p->prio = UWRR_TASK_PRIO; /* XXX may not be necessary */
+		p->static_prio = UWRR_TASK_PRIO;
+		p->rt_priority = 0;
+	}
 	else
 		p->prio = p->static_prio;
 }
@@ -3802,6 +3828,9 @@ asmlinkage long sys_sched_yield(void)
 	 */
 	if (rt_task(current))
 		target = rq->active;
+	if (SCHED_UWRR == current->policy)
+		/* XXX could be improved (make the user yield, too), but low priority */
+		target = current->array;
 
 	if (current->array->nr_active == 1) {
 		schedstat_inc(rq, yld_act_empty);
