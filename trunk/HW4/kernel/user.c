@@ -145,7 +145,7 @@ struct user_struct * alloc_uid(uid_t uid)
 		atomic_set(&new->sigpending, 0);
 		
 		new->uwrr_weight = UWRR_DEFAULT_WEIGHT;
-		new->uwrr_time_slice = UWRR_DEFAULT_WEIGHT * 100; /* XXX erp? */
+		new->uwrr_time_slice = UWRR_START_SLICE;
 		INIT_LIST_HEAD(&new->uwrr_list);
 		
 		INIT_PRIO_ARRAY(new->uwrr_tasks);
