@@ -47,7 +47,7 @@ struct user_struct root_user = {
 	.locked_shm     = 0,
 	
 	.uwrr_weight	= UWRR_DEFAULT_WEIGHT,
-	.uwrr_time_slice = UWRR_DEFAULT_WEIGHT * 100, /* XXX is this right? */
+	.uwrr_time_slice = UWRR_START_SLICE,
 	.uwrr_list = LIST_HEAD_INIT(root_user.uwrr_list),
 /*	.uwrr_tasks = problem  */
 #ifdef CONFIG_KEYS
@@ -110,7 +110,9 @@ void free_uid(struct user_struct *up)
 		// list delete up->uwrr_list 
 	}
 	if (up && atomic_dec_and_lock(&up->__count, &uidhash_lock)) {
-		if ( UWRR_DEFAULT_WEIGHT == up->uwrr_weight ) {
+		/* do not free user if UWRR data has been modified */
+		if ( UWRR_DEFAULT_WEIGHT == up->uwrr_weight && 
+			 UWRR_START_SLICE    == up->uwrr_time_slice ) {
 			list_del(&up->uwrr_list);
 			uid_hash_remove(up);
 			key_put(up->uid_keyring);

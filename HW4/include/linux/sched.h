@@ -363,6 +363,8 @@ struct signal_struct {
 
 #define UWRR_DEFAULT_WEIGHT 10 	/* the default weight for any user */
 #define UWRR_TASK_PRIO 	120		/* the priority of a UWRR task (default-nice) */
+#define UWRR_SLICE(w) (100*(w)) /* the user slice for a given weight */
+#define UWRR_START_SLICE UWRR_SLICE(UWRR_DEFAULT_WEIGHT) /* default user slice*/
 
 /* this is copied in from sched.c, because we need it here now */
 #define BITMAP_SIZE ((((MAX_PRIO+1+7)/8)+sizeof(long)-1)/sizeof(long))
