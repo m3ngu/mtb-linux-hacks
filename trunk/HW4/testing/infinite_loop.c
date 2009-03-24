@@ -3,10 +3,12 @@
 #include <time.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
 
-#define SECONDS_TO_RUN 20
+#define MAX_SECONDS 9999
 
-int main(){
+int main (int argc, char *argv[]) {
+
 	int policy;
 	policy = sched_getscheduler(0);
 	// TODO: Now, I'm thinking that we should not set the scheduling
@@ -35,9 +37,13 @@ int main(){
 	//TODO: infinite loop, for now this runs for a minute
 	clock_t curr_time, prev_time;
 	prev_time = 0;
-	short seconds_passed = 0;
+	unsigned short seconds_passed = 0, max_seconds = MAX_SECONDS;
 	
-	while(seconds_passed < SECONDS_TO_RUN) {
+	if (argc == 2) {
+		max_seconds = atoi(argv[1]);
+	}
+	
+	while(seconds_passed < max_seconds) {
 		int new_policy = sched_getscheduler(0);
 		if ( new_policy != policy ) {
 			printf("PID %d: Policy changed from %d to %d\n", getpid(), policy, new_policy);
