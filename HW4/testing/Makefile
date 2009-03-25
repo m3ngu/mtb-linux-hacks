@@ -7,7 +7,7 @@
 CFLAGS= -std=c99 -Wall -pedantic -g
 TREE_TAG=.hmwk4
 
-all: test-syscalls change-scheduler inf-loop 
+all: test-syscalls change-scheduler inf-loop change-weight
 
 test-syscalls: syscall_tests.c
 	$(CC) $(CFLAGS) -I /usr/src/linux-2.6.11.12$(TREE_TAG)/include -o $@ $^ 
