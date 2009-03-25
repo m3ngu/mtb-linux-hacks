@@ -646,7 +646,6 @@ static int effective_prio(task_t *p)
 static inline void __activate_task(task_t *p, runqueue_t *rq)
 {
 	if (SCHED_UWRR == p->policy) {
-		//printk(KERN_INFO "activation for UWRR for %d in progress\n", p->tgid);
 		rq->uwrr_running++;
 		enqueue_task(p, &p->user->uwrr_tasks);
 		if( list_empty(&p->user->uwrr_list) ) {
@@ -2646,11 +2645,9 @@ static inline int dependent_sleeper(int this_cpu, runqueue_t *this_rq)
 		p = list_entry(array->queue[idx].next, task_t, run_list);
 	else {
 		while (1) { /* XXX see note the other place this exact code appears */
+			BUG_ON(list_empty(&this_rq->uwrr_userlist));
 			struct list_head *first_user = this_rq->uwrr_userlist.next;
 			struct user_struct *uPtr;
-			if (first_user == &this_rq->uwrr_userlist) { 
-				printk(KERN_ERR "those about to deadlock salute you!");
-			}
 			uPtr = list_entry(first_user, struct user_struct, uwrr_list);
 			if ( unlikely( !uPtr->uwrr_tasks.nr_active ) ) { 
 				list_del_init(first_user);
@@ -2862,15 +2859,12 @@ go_idle:
 	else idx = MAX_PRIO;
 	/* insert check here: do we run a UWRR process? */
 	/* true if : idx >= 100 AND there is such a process */
-	/* if ( idx >= 100 && rq->uwrr_running > 0 ) {... } */
 	if ( MAX_RT_PRIO <= idx && 0 < rq->uwrr_running ) {
 		// it's showtime!
 		while (1) { /* XXX should be made into a goto with an unlikely() tag */
+			BUG_ON(list_empty(&rq->uwrr_userlist));
 			struct list_head *first_user = rq->uwrr_userlist.next;
 			struct user_struct *uPtr;
-			if (first_user == &rq->uwrr_userlist) { 
-				printk(KERN_ERR "those about to deadlock salute you!");
-			}
 			uPtr = list_entry(first_user, struct user_struct, uwrr_list);
 			if ( unlikely( !uPtr->uwrr_tasks.nr_active ) ) { 
 				list_del_init(first_user);
@@ -2928,12 +2922,6 @@ switch_tasks:
 	preempt_enable_no_resched();
 	if (unlikely(test_thread_flag(TIF_NEED_RESCHED)))
 		goto need_resched;
-#ifdef UWRR_TRACE
-// UWRR_TRACE
-	printk(KERN_DEBUG "Schedule chose PID %d (policy %d, prio %d)\n",
-		prev->tgid, prev->policy, prev->prio
-	);
-#endif
 }
 
 EXPORT_SYMBOL(schedule);
@@ -3543,7 +3531,6 @@ recheck:
 	    !capable(CAP_SYS_NICE))
 		return -EPERM;
 	if (( policy == SCHED_UWRR) ) {
-		// printk(KERN_INFO "Trying to schedule process %d for UWRR\n", p->tgid);
 		/* XXX your argument-checking could be here! */
 	}
 
@@ -3567,23 +3554,17 @@ recheck:
 	oldprio = p->prio;
 	__setscheduler(p, policy, param->sched_priority);
 	if (array) {
-//		printk(KERN_INFO "setscheduler attempting to activate process %d\n", p->tgid);
 		__activate_task(p, rq);
 		/*
 		 * Reschedule if we are currently running on this runqueue and
 		 * our priority decreased, or if we are not currently running on
 		 * this runqueue and our priority is higher than the current's
 		 */
-	//	printk(KERN_INFO "setscheduler finished activation\n");
 		if (task_running(rq, p)) {
-	//		printk(KERN_INFO "setscheduler in task_running branch\n");
 			if (p->prio > oldprio)
 				resched_task(rq->curr);
 		} else if (TASK_PREEMPTS_CURR(p, rq)) {
-	//		printk(KERN_INFO "setscheduler in preempt branch\n");
 			resched_task(rq->curr);
-		} else {
-	//		printk(KERN_INFO "setscheduler took neither reschedule branch\n");
 		}
 	}
 	task_rq_unlock(rq, &flags);
