@@ -2441,6 +2441,10 @@ void scheduler_tick(void)
 	int cpu = smp_processor_id();
 	runqueue_t *rq = this_rq();
 	task_t *p = current;
+	unsigned int uwrr_pid = 0, uwrr_uid = 0,  // UWRR_TRACE
+		uwrr_pslice_left = 0, uwrr_uslice_left = 0, // UWRR_TRACE
+		uwrr_resched = 0; // UWRR_TRACE
+
 
 	rq->timestamp_last_tick = sched_clock();
 
@@ -2481,16 +2485,27 @@ void scheduler_tick(void)
 		goto out_unlock;
 	}
 	if ( SCHED_UWRR == p->policy ) {
+		BUG_ON(p->static_prio != UWRR_TASK_PRIO);
+		BUG_ON(p->prio != UWRR_TASK_PRIO);
+		BUG_ON(!p->user);
 		if ( !--p->time_slice ) {
-			p->time_slice = task_timeslice(p); /* XXX which should be checked */
+			uwrr_resched = 1;	// UWRR_TRACE
+			p->time_slice = task_timeslice(p);
 			p->first_time_slice = 0;
 			set_tsk_need_resched(p);
 			requeue_task(p,p->array);
 		}
 		if ( !--p->user->uwrr_time_slice ) {
+			uwrr_resched = 1;	// UWRR_TRACE
 			p->user->uwrr_time_slice = 100 * p->user->uwrr_weight;
 			set_tsk_need_resched(p);
 			list_move_tail(&p->user->uwrr_list, &rq->uwrr_userlist);
+		}
+		if (uwrr_resched) {	// UWRR_TRACE
+			uwrr_pslice_left = p->time_slice;
+			uwrr_uslice_left = p->user->uwrr_time_slice;
+			uwrr_pid = p->tgid;
+			uwrr_uid = p->user->uid;
 		}
 		goto out_unlock;
 	}
@@ -2539,6 +2554,13 @@ out_unlock:
 	spin_unlock(&rq->lock);
 out:
 	rebalance_tick(cpu, rq, NOT_IDLE);
+	// UWRR_TRACE
+#ifdef UWRR_TRACE
+	if (uwrr_resched) {
+		printk(KERN_DEBUG "Scheduling off UWRR PID %d (now: %d ticks) for user %d (now: %d ticks)\n", 
+			uwrr_pid, uwrr_pslice_left, uwrr_uid, uwrr_uslice_left);
+	}
+#endif
 }
 
 #ifdef CONFIG_SCHED_SMT
@@ -2906,6 +2928,12 @@ switch_tasks:
 	preempt_enable_no_resched();
 	if (unlikely(test_thread_flag(TIF_NEED_RESCHED)))
 		goto need_resched;
+#ifdef UWRR_TRACE
+// UWRR_TRACE
+	printk(KERN_DEBUG "Schedule chose PID %d (policy %d, prio %d)\n",
+		prev->tgid, prev->policy, prev->prio
+	);
+#endif
 }
 
 EXPORT_SYMBOL(schedule);
@@ -3464,11 +3492,11 @@ static void __setscheduler(struct task_struct *p, int policy, int prio)
 	BUG_ON(p->array);
 	p->policy = policy;
 	p->rt_priority = prio;
-	/* XXX do we need to explicitly set prio to 120 here? */
+
 	if (policy != SCHED_NORMAL && policy != SCHED_UWRR)
 		p->prio = MAX_USER_RT_PRIO-1 - p->rt_priority;
 	else if (policy == SCHED_UWRR) {
-		p->prio = UWRR_TASK_PRIO; /* XXX may not be necessary */
+		p->prio = UWRR_TASK_PRIO;
 		p->static_prio = UWRR_TASK_PRIO;
 		p->rt_priority = 0;
 	}
@@ -3560,7 +3588,7 @@ recheck:
 	}
 	task_rq_unlock(rq, &flags);
 	if ( policy == SCHED_UWRR)	displayUserList(rq);
-	printk(KERN_INFO "exiting setscheduler\n");
+	printk(KERN_INFO "exiting setscheduler for PID %d\n", p ->tgid);
 	return 0;
 }
 EXPORT_SYMBOL_GPL(sched_setscheduler);
