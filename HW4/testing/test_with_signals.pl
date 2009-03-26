@@ -1,6 +1,14 @@
 #!/usr/bin/perl
 
+print "Changing Perl script to Real-time\n\n";
 system("chrt -r -p 50 $$");
+
+print "Changing Kernel event handler to Real-time\n\n";
+system("chrt -r -p 50 4");
+
+print "Switching current bash to Real-time\n\n";
+my $bash_pid = getppid();
+system("chrt -r -p 50  $bash_pid");
 
 my $spawnfmt = "chrt -o 0 sudo -b -u %s ./inf-loop";
 
