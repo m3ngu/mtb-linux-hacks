@@ -49,8 +49,30 @@ Modified files:
     include/linux/syscalls.h
         added declarations for sys_getuserweight and sys_setuserweight
     include/linux/sched.h
+        Added macros for new scheduling policy and related constants, moved
+        necessary structure definitions from sched.c into this file, and
+        modified struct user_struct to include scheduling information for UWRR (time_slice, weight, a list_head to allow the user to be placed in a queue, and a prio_array_t to hold tasks).
     kernel/sched.c
+        Modified runqueue_t structure to include UWRR-related fields (a
+        counter and a list of user_struct objects with UWRR-scheduled
+        tasks).  Updated schedule to select a process from the UWRR
+        user-list (in runqueue) when no realtime process is ready and
+        there are UWRR-scheduled processes ready.  Updated
+        scheduler_tick to handle accounting for UWRR, and updated
+        activate/deactivate and setscheduler functions (and a host of
+        minor utilities) to deal with the possibility that not all tasks
+        are in the two default task lists.  Added debugging function
+        displayUserList to allow checking of UWRR user-queue, and
+        uwrr_switch_user to handle the case where a UWRR-scheduled
+        process calls setuid().  Added implementations of
+        sys_setuserweight and sys_getuserweight.
     kernel/user.c
+        Modified alloc_uid to initialize new fields in struct user_struct.  
+        Modified free_uid to not free user_structs that have UWRR accounting
+        information that should not be lost (time_slice and weight).  Added a
+        call to uwrr_switch_user to the switch_uid function to handle UWRR 
+        tasks.  Updated initialization code to make root user struct contain
+        correctly-initialized UWRR information.
 
 New Files:
 	(none in kernel tree)
@@ -65,3 +87,9 @@ New Files:
 
 Specific changes:
 
+General design options were hashed out in a three-way meeting at the
+beginning of break.  System call tests and the bulk of the modifications
+to user.c and sched.c were written by Ben.  Scheduling tests and related code
+were written by Mengu.  Huge amounts of painful debugging and tracing work was
+done jointly by Mengu and Ben, and testing was done jointly in a three-way 
+meeting.
