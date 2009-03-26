@@ -1,0 +1,26 @@
+README for HW4, group 2 (Ben Warfield, Thierry Bertin-Mahieux, Mengu Sukan)
+
+Files in this package:
+	README 	- This file.
+	homework_work.txt	- In which we assert that this code is correct
+	uwrr.patch	-	actual kernel patch file
+	testing/Makefile	- Makefile for demonstration/test code	
+	testing/change_scheduler.c	- utility to change the scheduler of a process
+	testing/change_userweight.c	- utility to change the weight of a user
+	testing/syscall_tests.c	- test/demo program for new system calls
+	testing/infinite_loop.c	- cpu-bound program for UWRR scheduling demo
+	testing/setup.sh	- setup script for UWRR scheduling demo
+	testing/test_with_signals.pl	- main driver script for scheduling demo
+
+
+To run all test and demonstration code, run "make test" in the testing 
+directory.  The compiler will look for linux header files in 
+/usr/src/linux-2.6.11.12$(TREE_TAG).  By default, $TREE_TAG is set to "-hwk4", 
+but it can be changed on the command line, e.g.
+
+	make test TREE_TAG='-group2'
+	make test TREE_TAG=''
+
+To run only the system call tests, run the program testing/test-syscalls.
+To run only the scheduling tests, run the program testing/test_with_signals.pl
+(but first run testing/setup.sh if the 'make test' has not previously been run).
