@@ -5,7 +5,7 @@
 
 
 CFLAGS= -std=c99 -Wall -pedantic -g
-TREE_TAG=.hmwk4
+TREE_TAG=-hwk4
 BIN=test-syscalls change-scheduler inf-loop change-weight
 
 all: $(BIN)

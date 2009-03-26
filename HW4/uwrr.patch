@@ -1,0 +1,661 @@
+diff -Naur linux-2.6.11.12/arch/i386/kernel/entry.S linux-2.6.11.12-hwk4/arch/i386/kernel/entry.S
+--- linux-2.6.11.12/arch/i386/kernel/entry.S	2009-03-26 02:18:47.000000000 -0400
++++ linux-2.6.11.12-hwk4/arch/i386/kernel/entry.S	2009-03-16 19:55:19.000000000 -0400
+@@ -890,5 +890,36 @@
+ 	.long sys_add_key
+ 	.long sys_request_key
+ 	.long sys_keyctl
+-
++	.long sys_ni_syscall
++	.long sys_ni_syscall 		/* 290 */
++	.long sys_ni_syscall
++	.long sys_ni_syscall
++	.long sys_ni_syscall
++	.long sys_ni_syscall
++	.long sys_ni_syscall		/* 295 */
++	.long sys_ni_syscall
++	.long sys_ni_syscall
++	.long sys_ni_syscall
++	.long sys_ni_syscall
++	.long sys_ni_syscall		/* 300 */
++	.long sys_ni_syscall
++	.long sys_ni_syscall
++	.long sys_ni_syscall
++	.long sys_ni_syscall
++	.long sys_ni_syscall		/* 305 */
++	.long sys_ni_syscall
++	.long sys_ni_syscall
++	.long sys_ni_syscall
++	.long sys_ni_syscall
++	.long sys_ni_syscall		/* 310 */
++	.long sys_ni_syscall
++	.long sys_ni_syscall
++	.long sys_ni_syscall
++	.long sys_ni_syscall
++	.long sys_ni_syscall		/* 315 */
++	.long sys_ni_syscall
++	.long sys_ni_syscall
++	.long sys_getuserweight
++	.long sys_setuserweight		/* 319 */
++		
+ syscall_table_size=(.-sys_call_table)
+diff -Naur linux-2.6.11.12/include/asm-i386/unistd.h linux-2.6.11.12-hwk4/include/asm-i386/unistd.h
+--- linux-2.6.11.12/include/asm-i386/unistd.h	2005-06-11 22:45:37.000000000 -0400
++++ linux-2.6.11.12-hwk4/include/asm-i386/unistd.h	2009-03-16 19:55:19.000000000 -0400
+@@ -294,8 +294,10 @@
+ #define __NR_add_key		286
+ #define __NR_request_key	287
+ #define __NR_keyctl		288
+-
+-#define NR_syscalls 289
++/* nothing for a looong time */
++#define __NR_getuserweight 318
++#define __NR_setuserweight 319
++#define NR_syscalls 320
+ 
+ /*
+  * user-visible error numbers are in the range -1 - -128: see
+diff -Naur linux-2.6.11.12/include/linux/sched.h linux-2.6.11.12-hwk4/include/linux/sched.h
+--- linux-2.6.11.12/include/linux/sched.h	2005-06-11 22:45:37.000000000 -0400
++++ linux-2.6.11.12-hwk4/include/linux/sched.h	2009-03-26 01:27:35.000000000 -0400
+@@ -130,6 +130,7 @@
+ #define SCHED_NORMAL		0
+ #define SCHED_FIFO		1
+ #define SCHED_RR		2
++#define SCHED_UWRR		4
+ 
+ struct sched_param {
+ 	int sched_priority;
+@@ -360,6 +361,23 @@
+ 
+ #define rt_task(p)		(unlikely((p)->prio < MAX_RT_PRIO))
+ 
++#define UWRR_DEFAULT_WEIGHT 10 	/* the default weight for any user */
++#define UWRR_TASK_PRIO 	120		/* the priority of a UWRR task (default-nice) */
++#define UWRR_SLICE(w) (100*(w)) /* the user slice for a given weight */
++#define UWRR_START_SLICE UWRR_SLICE(UWRR_DEFAULT_WEIGHT) /* default user slice*/
++
++/* this is copied in from sched.c, because we need it here now */
++/* XXX this section should probably be broken into a small header file of its 
++	own, in fact... call it sched_user.h ?*/
++#define BITMAP_SIZE ((((MAX_PRIO+1+7)/8)+sizeof(long)-1)/sizeof(long))
++
++struct prio_array {
++	unsigned int nr_active;
++	unsigned long bitmap[BITMAP_SIZE];
++	struct list_head queue[MAX_PRIO];
++};
++typedef struct prio_array prio_array_t;
++
+ /*
+  * Some day this will be a full-fledged user tracking system..
+  */
+@@ -371,6 +389,11 @@
+ 	/* protected by mq_lock	*/
+ 	unsigned long mq_bytes;	/* How many bytes can be allocated to mqueue? */
+ 	unsigned long locked_shm; /* How many pages of mlocked shm ? */
++	
++	unsigned long    	uwrr_weight;
++	unsigned int    	uwrr_time_slice;
++	struct list_head 	uwrr_list;
++	prio_array_t     	uwrr_tasks;
+ 
+ #ifdef CONFIG_KEYS
+ 	struct key *uid_keyring;	/* UID specific keyring */
+@@ -387,7 +410,7 @@
+ extern struct user_struct root_user;
+ #define INIT_USER (&root_user)
+ 
+-typedef struct prio_array prio_array_t;
++
+ struct backing_dev_info;
+ struct reclaim_state;
+ 
+@@ -692,6 +715,7 @@
+ 	return tsk->signal->pgrp;
+ }
+ 
++
+ /**
+  * pid_alive - check that a task structure is not stale
+  * @p: Task structure to be checked.
+diff -Naur linux-2.6.11.12/include/linux/syscalls.h linux-2.6.11.12-hwk4/include/linux/syscalls.h
+--- linux-2.6.11.12/include/linux/syscalls.h	2005-06-11 22:45:37.000000000 -0400
++++ linux-2.6.11.12-hwk4/include/linux/syscalls.h	2009-03-16 19:55:19.000000000 -0400
+@@ -505,5 +505,6 @@
+ 
+ asmlinkage long sys_keyctl(int cmd, unsigned long arg2, unsigned long arg3,
+ 			   unsigned long arg4, unsigned long arg5);
+-
++asmlinkage long sys_getuserweight(int uid);
++asmlinkage long sys_setuserweight(int uid, int weight);
+ #endif
+diff -Naur linux-2.6.11.12/kernel/sched.c linux-2.6.11.12-hwk4/kernel/sched.c
+--- linux-2.6.11.12/kernel/sched.c	2009-03-26 02:18:50.000000000 -0400
++++ linux-2.6.11.12-hwk4/kernel/sched.c	2009-03-26 01:59:08.000000000 -0400
+@@ -150,7 +150,11 @@
+ 		(MAX_BONUS / 2 + DELTA((p)) + 1) / MAX_BONUS - 1))
+ 
+ #define TASK_PREEMPTS_CURR(p, rq) \
+-	((p)->prio < (rq)->curr->prio)
++	(SCHED_UWRR == (p)->policy ?  \
++		SCHED_NORMAL == (rq)->curr->policy \
++		: ( SCHED_UWRR == (rq)->curr->policy ? rt_task(p) : \
++		( (p)->prio < (rq)->curr->prio ) ) )
++
+ 
+ /*
+  * task_timeslice() scales user-nice values [ -20 ... 0 ... 19 ]
+@@ -177,17 +181,20 @@
+ /*
+  * These are the runqueue data structures:
+  */
+-
++/*
+ #define BITMAP_SIZE ((((MAX_PRIO+1+7)/8)+sizeof(long)-1)/sizeof(long))
+-
++*/
+ typedef struct runqueue runqueue_t;
+ 
++/* debugging function for UWRR scheduler */
++void displayUserList(runqueue_t *rq);
++/*
+ struct prio_array {
+ 	unsigned int nr_active;
+ 	unsigned long bitmap[BITMAP_SIZE];
+ 	struct list_head queue[MAX_PRIO];
+ };
+-
++*/
+ /*
+  * This is the main, per-CPU runqueue data structure.
+  *
+@@ -223,6 +230,7 @@
+ 	prio_array_t *active, *expired, arrays[2];
+ 	int best_expired_prio;
+ 	atomic_t nr_iowait;
++	
+ 
+ #ifdef CONFIG_SMP
+ 	struct sched_domain *sd;
+@@ -276,6 +284,10 @@
+ 	/* sched_balance_exec() stats */
+ 	unsigned long sbe_cnt;
+ #endif
++	/* userlist for UWRR scheduler */
++	/* moved to the end just in case it mattered, which it obviously didn't */
++	unsigned long uwrr_running;
++	struct list_head uwrr_userlist;
+ };
+ 
+ static DEFINE_PER_CPU(struct runqueue, runqueues);
+@@ -615,7 +627,7 @@
+ {
+ 	int bonus, prio;
+ 
+-	if (rt_task(p))
++	if (rt_task(p) || SCHED_UWRR == p->policy) /* UWRR tasks never change prio*/
+ 		return p->prio;
+ 
+ 	bonus = CURRENT_BONUS(p) - MAX_BONUS / 2;
+@@ -633,7 +645,14 @@
+  */
+ static inline void __activate_task(task_t *p, runqueue_t *rq)
+ {
+-	enqueue_task(p, rq->active);
++	if (SCHED_UWRR == p->policy) {
++		rq->uwrr_running++;
++		enqueue_task(p, &p->user->uwrr_tasks);
++		if( list_empty(&p->user->uwrr_list) ) {
++			list_add_tail(&p->user->uwrr_list, &rq->uwrr_userlist);
++		}
++	} else
++		enqueue_task(p, rq->active);
+ 	rq->nr_running++;
+ }
+ 
+@@ -762,6 +781,13 @@
+ static void deactivate_task(struct task_struct *p, runqueue_t *rq)
+ {
+ 	rq->nr_running--;
++	if (SCHED_UWRR == p->policy) {
++		rq->uwrr_running--;
++		/* remove user from queue if last process */
++		if ( 1 == p->array->nr_active ) {
++			list_del_init(&p->user->uwrr_list);
++		}
++	}
+ 	dequeue_task(p, p->array);
+ 	p->array = NULL;
+ }
+@@ -1233,6 +1259,8 @@
+ 			 * do child-runs-first in anticipation of an exec. This
+ 			 * usually avoids a lot of COW overhead.
+ 			 */
++			 /* XXX is this something we need to worry about? 
++			 	well, if so I think I fixed it... */
+ 			if (unlikely(!current->array))
+ 				__activate_task(p, rq);
+ 			else {
+@@ -1241,6 +1269,7 @@
+ 				p->array = current->array;
+ 				p->array->nr_active++;
+ 				rq->nr_running++;
++				if (SCHED_UWRR == p->policy) rq->uwrr_running++;
+ 			}
+ 			set_need_resched();
+ 		} else
+@@ -2414,6 +2443,10 @@
+ 	int cpu = smp_processor_id();
+ 	runqueue_t *rq = this_rq();
+ 	task_t *p = current;
++	unsigned int uwrr_pid = 0, uwrr_uid = 0,  // UWRR_TRACE
++		uwrr_pslice_left = 0, uwrr_uslice_left = 0, // UWRR_TRACE
++		uwrr_resched = 0; // UWRR_TRACE
++
+ 
+ 	rq->timestamp_last_tick = sched_clock();
+ 
+@@ -2425,7 +2458,8 @@
+ 	}
+ 
+ 	/* Task might have expired already, but not scheduled off yet */
+-	if (p->array != rq->active) {
++	/* OR it might be a UWRR task, in which case we have a problem */
++	if (p->array != rq->active && SCHED_UWRR != p->policy) {
+ 		set_tsk_need_resched(p);
+ 		goto out;
+ 	}
+@@ -2452,6 +2486,31 @@
+ 		}
+ 		goto out_unlock;
+ 	}
++	if ( SCHED_UWRR == p->policy ) {
++		BUG_ON(p->static_prio != UWRR_TASK_PRIO);
++		BUG_ON(p->prio != UWRR_TASK_PRIO);
++		BUG_ON(!p->user);
++		if ( !--p->time_slice ) {
++			uwrr_resched = 1;	// UWRR_TRACE
++			p->time_slice = task_timeslice(p);
++			p->first_time_slice = 0;
++			set_tsk_need_resched(p);
++			requeue_task(p,p->array);
++		}
++		if ( !--p->user->uwrr_time_slice ) {
++			uwrr_resched = 1;	// UWRR_TRACE
++			p->user->uwrr_time_slice = 100 * p->user->uwrr_weight;
++			set_tsk_need_resched(p);
++			list_move_tail(&p->user->uwrr_list, &rq->uwrr_userlist);
++		}
++		if (uwrr_resched) {	// UWRR_TRACE
++			uwrr_pslice_left = p->time_slice;
++			uwrr_uslice_left = p->user->uwrr_time_slice;
++			uwrr_pid = p->tgid;
++			uwrr_uid = p->user->uid;
++		}
++		goto out_unlock;
++	}
+ 	if (!--p->time_slice) {
+ 		dequeue_task(p, rq->active);
+ 		set_tsk_need_resched(p);
+@@ -2497,6 +2556,13 @@
+ 	spin_unlock(&rq->lock);
+ out:
+ 	rebalance_tick(cpu, rq, NOT_IDLE);
++	// UWRR_TRACE
++#ifdef UWRR_TRACE
++	if (uwrr_resched) {
++		printk(KERN_DEBUG "Scheduling off UWRR PID %d (now: %d ticks) for user %d (now: %d ticks)\n", 
++			uwrr_pid, uwrr_pslice_left, uwrr_uid, uwrr_uslice_left);
++	}
++#endif
+ }
+ 
+ #ifdef CONFIG_SCHED_SMT
+@@ -2573,12 +2639,27 @@
+ 	if (!this_rq->nr_running)
+ 		goto out_unlock;
+ 	array = this_rq->active;
+-	if (!array->nr_active)
++	if (!array->nr_active && !this_rq->uwrr_running)
+ 		array = this_rq->expired;
+-	BUG_ON(!array->nr_active);
+-
+-	p = list_entry(array->queue[sched_find_first_bit(array->bitmap)].next,
+-		task_t, run_list);
++	BUG_ON(!array->nr_active && !this_rq->uwrr_running);
++	
++	int idx = array->nr_active ? sched_find_first_bit(array->bitmap) : MAX_PRIO;
++	if ( MAX_RT_PRIO > idx || ! this_rq->uwrr_running ) 
++		p = list_entry(array->queue[idx].next, task_t, run_list);
++	else {
++		while (1) { /* XXX see note the other place this exact code appears */
++			BUG_ON(list_empty(&this_rq->uwrr_userlist));
++			struct list_head *first_user = this_rq->uwrr_userlist.next;
++			struct user_struct *uPtr;
++			uPtr = list_entry(first_user, struct user_struct, uwrr_list);
++			if ( unlikely( !uPtr->uwrr_tasks.nr_active ) ) { 
++				list_del_init(first_user);
++			} else {
++				p = list_entry(uPtr->uwrr_tasks.queue[UWRR_TASK_PRIO].next, task_t, run_list);
++				break;
++			}
++		}
++	}
+ 
+ 	for_each_cpu_mask(i, sibling_map) {
+ 		runqueue_t *smt_rq = cpu_rq(i);
+@@ -2733,6 +2814,7 @@
+ 	}
+ 
+ 	cpu = smp_processor_id();
++
+ 	if (unlikely(!rq->nr_running)) {
+ go_idle:
+ 		idle_balance(cpu, rq);
+@@ -2763,7 +2845,7 @@
+ 	}
+ 
+ 	array = rq->active;
+-	if (unlikely(!array->nr_active)) {
++	if (unlikely(!array->nr_active && !rq->uwrr_running)) {
+ 		/*
+ 		 * Switch the active and expired arrays.
+ 		 */
+@@ -2776,11 +2858,29 @@
+ 	} else
+ 		schedstat_inc(rq, sched_noswitch);
+ 
+-	idx = sched_find_first_bit(array->bitmap);
+-	queue = array->queue + idx;
++	if ( likely(array->nr_active) ) idx = sched_find_first_bit(array->bitmap);
++	else idx = MAX_PRIO;
++	/* insert check here: do we run a UWRR process? */
++	/* true if : idx >= 100 AND there is such a process */
++	if ( MAX_RT_PRIO <= idx && 0 < rq->uwrr_running ) {
++		// it's showtime!
++		while (1) { /* XXX should be made into a goto with an unlikely() tag */
++			BUG_ON(list_empty(&rq->uwrr_userlist));
++			struct list_head *first_user = rq->uwrr_userlist.next;
++			struct user_struct *uPtr;
++			uPtr = list_entry(first_user, struct user_struct, uwrr_list);
++			if ( unlikely( !uPtr->uwrr_tasks.nr_active ) ) { 
++				list_del_init(first_user);
++			} else {
++				queue = uPtr->uwrr_tasks.queue + UWRR_TASK_PRIO;				
++				break;
++			}
++		}
++	} else {
++		queue = array->queue + idx;
++	}
+ 	next = list_entry(queue->next, task_t, run_list);
+-
+-	if (!rt_task(next) && next->activated > 0) {
++	if (!rt_task(next) && SCHED_UWRR != next->policy && next->activated > 0) {
+ 		unsigned long long delta = now - next->timestamp;
+ 
+ 		if (next->activated == 1)
+@@ -3383,8 +3483,14 @@
+ 	BUG_ON(p->array);
+ 	p->policy = policy;
+ 	p->rt_priority = prio;
+-	if (policy != SCHED_NORMAL)
++
++	if (policy != SCHED_NORMAL && policy != SCHED_UWRR)
+ 		p->prio = MAX_USER_RT_PRIO-1 - p->rt_priority;
++	else if (policy == SCHED_UWRR) {
++		p->prio = UWRR_TASK_PRIO;
++		p->static_prio = UWRR_TASK_PRIO;
++		p->rt_priority = 0;
++	}
+ 	else
+ 		p->prio = p->static_prio;
+ }
+@@ -3409,7 +3515,7 @@
+ 	if (policy < 0)
+ 		policy = oldpolicy = p->policy;
+ 	else if (policy != SCHED_FIFO && policy != SCHED_RR &&
+-				policy != SCHED_NORMAL)
++				policy != SCHED_NORMAL && policy != SCHED_UWRR)
+ 			return -EINVAL;
+ 	/*
+ 	 * Valid priorities for SCHED_FIFO and SCHED_RR are
+@@ -3427,6 +3533,9 @@
+ 	if ((current->euid != p->euid) && (current->euid != p->uid) &&
+ 	    !capable(CAP_SYS_NICE))
+ 		return -EPERM;
++	if (( policy == SCHED_UWRR) ) {
++		/* XXX your argument-checking could be here! */
++	}
+ 
+ 	retval = security_task_setscheduler(p, policy, param);
+ 	if (retval)
+@@ -3457,10 +3566,13 @@
+ 		if (task_running(rq, p)) {
+ 			if (p->prio > oldprio)
+ 				resched_task(rq->curr);
+-		} else if (TASK_PREEMPTS_CURR(p, rq))
++		} else if (TASK_PREEMPTS_CURR(p, rq)) {
+ 			resched_task(rq->curr);
++		}
+ 	}
+ 	task_rq_unlock(rq, &flags);
++	if ( policy == SCHED_UWRR)	displayUserList(rq);
++	printk(KERN_INFO "exiting setscheduler for PID %d\n", p ->tgid);
+ 	return 0;
+ }
+ EXPORT_SYMBOL_GPL(sched_setscheduler);
+@@ -3728,6 +3840,9 @@
+ 	 */
+ 	if (rt_task(current))
+ 		target = rq->active;
++	if (SCHED_UWRR == current->policy)
++		/* XXX could be improved (make the user yield, too), but low priority */
++		target = current->array;
+ 
+ 	if (current->array->nr_active == 1) {
+ 		schedstat_inc(rq, yld_act_empty);
+@@ -4962,7 +5077,8 @@
+ 		rq->active = rq->arrays;
+ 		rq->expired = rq->arrays + 1;
+ 		rq->best_expired_prio = MAX_PRIO;
+-
++		INIT_LIST_HEAD(&rq->uwrr_userlist);
++		rq->uwrr_running = 0;
+ #ifdef CONFIG_SMP
+ 		rq->sd = &sched_domain_dummy;
+ 		rq->cpu_load = 0;
+@@ -5058,3 +5174,97 @@
+ 	return(cpu_curr(cpu));
+ }
+ #endif
++
++asmlinkage long sys_getuserweight(int uid) {
++	struct user_struct *uptr = NULL;
++	int weight;
++	if ( -1 == uid) {
++		weight = current->user->uwrr_weight;
++	} else if ( 0 > uid || 65535 < uid ) { /* XXX better taken from limit.h? */
++		return -EINVAL;
++	} else {
++		uptr = alloc_uid(uid);
++		if (NULL == uptr) return -EINVAL;
++		weight = uptr->uwrr_weight;
++		free_uid(uptr);
++	}
++	return weight;
++}
++
++asmlinkage long sys_setuserweight(int uid, int weight) {
++	struct user_struct *uptr, *me; 
++	/* unbelievably, no upper limit to weight */
++	if ( 0 >= weight ) {
++		printk(KERN_DEBUG "invalid weight %d found\n", weight);
++		return -EINVAL;
++	}
++	if ( -1 > uid || 65535 < uid ) {
++		printk(KERN_DEBUG "invalid uid %d found", uid);
++		return -EINVAL;
++	}
++	/* only root is allowed in */
++	me = current->user;
++	if ( 0 != me->uid ) return -EACCES;
++	
++	if ( -1 == uid ) uptr = me;
++	else uptr = alloc_uid(uid);	
++	if (NULL == uptr) return -EINVAL;
++	
++	uptr->uwrr_weight = weight;
++
++	if ( -1 != uid ) free_uid(uptr);
++	return 0;
++}
++
++/* helper function for switch_uid in user.c: if a UWRR process has its owner 
++	changed, change its queue as well */
++
++void uwrr_switch_user(task_t *p, struct user_struct *old, struct user_struct *new) {
++	unsigned long flags;
++	runqueue_t *rq;
++	if ( likely(SCHED_UWRR != p->policy) ) return;
++	rq = task_rq_lock(p, &flags);
++	if (p->array) {
++		deactivate_task(p, rq);
++		__activate_task(p, rq);
++	}
++	if ( !old->uwrr_tasks.nr_active ) list_del_init(&old->uwrr_list);
++	task_rq_unlock(rq, &flags);
++	displayUserList(rq);
++}
++
++
++/**
++ * helper/debug function, prints barrier list to KERN_INFO
++ */
++void displayUserList(runqueue_t *rq)
++{
++	struct list_head *iter, *task_iter, *user_tasklist, *tmp;
++	struct user_struct *objPtr;
++	struct task_struct *taskPtr;
++	
++
++	printk(KERN_INFO "Current user task list (should contain %lu PIDs):\n",
++		rq->uwrr_running);
++	list_for_each_safe(iter, tmp, &rq->uwrr_userlist) {
++		printk(KERN_INFO "  Current list pointer: %p\n", iter);
++		objPtr = list_entry(iter, struct user_struct, uwrr_list);
++		printk(KERN_INFO "  Current item pointer: %p\n", objPtr);
++		printk(KERN_INFO "    uid: %d    slice left: %d\n", 
++			objPtr->uid, objPtr->uwrr_time_slice);
++		user_tasklist = objPtr->uwrr_tasks.queue + UWRR_TASK_PRIO;
++		printk(KERN_INFO "    nr_active for this user queue is %d\n",
++			objPtr->uwrr_tasks.nr_active);
++		if ( list_empty(user_tasklist) ) {
++			printk(KERN_INFO "    No tasks for this user\n");	
++		} else {
++			list_for_each(task_iter, user_tasklist) {
++				printk(KERN_INFO "      Current task-list pointer: %p\n", task_iter);
++				taskPtr = list_entry(task_iter, struct task_struct, run_list);
++				printk(KERN_INFO "        pid: %d    slice left: %d\n",
++					taskPtr->tgid, taskPtr->time_slice);
++			}
++		}
++	}
++	printk(KERN_INFO "End of list\n");
++}
+diff -Naur linux-2.6.11.12/kernel/user.c linux-2.6.11.12-hwk4/kernel/user.c
+--- linux-2.6.11.12/kernel/user.c	2005-06-11 22:45:37.000000000 -0400
++++ linux-2.6.11.12-hwk4/kernel/user.c	2009-03-26 01:57:17.000000000 -0400
+@@ -24,10 +24,22 @@
+ #define __uidhashfn(uid)	(((uid >> UIDHASH_BITS) + uid) & UIDHASH_MASK)
+ #define uidhashentry(uid)	(uidhash_table + __uidhashfn((uid)))
+ 
++#define INIT_PRIO_ARRAY(array) {                	\
++		int k;	 \
++		for (k = 0; k < MAX_PRIO; k++) {		\
++			INIT_LIST_HEAD(array.queue + k);		\
++			__clear_bit(k, array.bitmap);  		\
++		}											\
++		__set_bit(MAX_PRIO, array.bitmap);	    	\
++		array.nr_active = 0;					\
++	}
++
+ static kmem_cache_t *uid_cachep;
+ static struct list_head uidhash_table[UIDHASH_SZ];
+ static DEFINE_SPINLOCK(uidhash_lock);
+ 
++extern void uwrr_switch_user(task_t *p, struct user_struct *old, struct user_struct *new);
++
+ struct user_struct root_user = {
+ 	.__count	= ATOMIC_INIT(1),
+ 	.processes	= ATOMIC_INIT(1),
+@@ -35,6 +47,11 @@
+ 	.sigpending	= ATOMIC_INIT(0),
+ 	.mq_bytes	= 0,
+ 	.locked_shm     = 0,
++	
++	.uwrr_weight	= UWRR_DEFAULT_WEIGHT,
++	.uwrr_time_slice = UWRR_START_SLICE,
++	.uwrr_list = LIST_HEAD_INIT(root_user.uwrr_list),
++/*	.uwrr_tasks = problem  */
+ #ifdef CONFIG_KEYS
+ 	.uid_keyring	= &root_user_keyring,
+ 	.session_keyring = &root_session_keyring,
+@@ -90,11 +107,20 @@
+ 
+ void free_uid(struct user_struct *up)
+ {
++	if ( up && !up->uwrr_tasks.nr_active ) {
++		// synchronization??
++		// list delete up->uwrr_list 
++	}
+ 	if (up && atomic_dec_and_lock(&up->__count, &uidhash_lock)) {
+-		uid_hash_remove(up);
+-		key_put(up->uid_keyring);
+-		key_put(up->session_keyring);
+-		kmem_cache_free(uid_cachep, up);
++		/* do not free user if UWRR data has been modified */
++		if ( UWRR_DEFAULT_WEIGHT == up->uwrr_weight && 
++			 UWRR_START_SLICE    == up->uwrr_time_slice ) {
++			list_del(&up->uwrr_list);
++			uid_hash_remove(up);
++			key_put(up->uid_keyring);
++			key_put(up->session_keyring);
++			kmem_cache_free(uid_cachep, up);
++		}
+ 		spin_unlock(&uidhash_lock);
+ 	}
+ }
+@@ -119,6 +145,13 @@
+ 		atomic_set(&new->processes, 0);
+ 		atomic_set(&new->files, 0);
+ 		atomic_set(&new->sigpending, 0);
++		
++		new->uwrr_weight = UWRR_DEFAULT_WEIGHT;
++		new->uwrr_time_slice = UWRR_START_SLICE;
++		INIT_LIST_HEAD(&new->uwrr_list);
++		
++		INIT_PRIO_ARRAY(new->uwrr_tasks);
++
+ 
+ 		new->mq_bytes = 0;
+ 		new->locked_shm = 0;
+@@ -162,6 +195,7 @@
+ 	atomic_dec(&old_user->processes);
+ 	switch_uid_keyring(new_user);
+ 	current->user = new_user;
++	uwrr_switch_user(current, old_user, new_user);
+ 	free_uid(old_user);
+ 	suid_keys(current);
+ }
+@@ -181,6 +215,9 @@
+ 	spin_lock(&uidhash_lock);
+ 	uid_hash_insert(&root_user, uidhashentry(0));
+ 	spin_unlock(&uidhash_lock);
++	/* initialize prio_array_t of root user, because this seems like 
++		the best place to do it */
++	INIT_PRIO_ARRAY(root_user.uwrr_tasks);
+ 
+ 	return 0;
+ }
