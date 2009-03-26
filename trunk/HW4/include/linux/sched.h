@@ -367,6 +367,8 @@ struct signal_struct {
 #define UWRR_START_SLICE UWRR_SLICE(UWRR_DEFAULT_WEIGHT) /* default user slice*/
 
 /* this is copied in from sched.c, because we need it here now */
+/* XXX this section should probably be broken into a small header file of its 
+	own, in fact... call it sched_user.h ?*/
 #define BITMAP_SIZE ((((MAX_PRIO+1+7)/8)+sizeof(long)-1)/sizeof(long))
 
 struct prio_array {
@@ -375,6 +377,7 @@ struct prio_array {
 	struct list_head queue[MAX_PRIO];
 };
 typedef struct prio_array prio_array_t;
+
 /*
  * Some day this will be a full-fledged user tracking system..
  */
@@ -711,6 +714,12 @@ static inline pid_t process_group(struct task_struct *tsk)
 {
 	return tsk->signal->pgrp;
 }
+
+/* XXX also needs to be in sched_user.h... only it requires information that's 
+	in this file *and* in that file, which is slightly difficult to resolve... 
+*/
+void uwrr_switch_user(task_t *p,  struct user_struct *new_user);
+
 
 /**
  * pid_alive - check that a task structure is not stale
