@@ -23,4 +23,10 @@ but it can be changed on the command line, e.g.
 
 To run only the system call tests, run the program testing/test-syscalls.
 To run only the scheduling tests, run the program testing/test_with_signals.pl
-(but first run testing/setup.sh if the 'make test' has not previously been run).
+(but first run testing/setup.sh if the 'make test' has not previously been run).  
+Running the two test suites separately will probably be more informative.
+
+At the end of test_with_signals.pl, the test script should launch 'top'.  If it
+fails to launch (possible, since we have loaded the system heavily with
+high-priority tasks), we recommend interrupting the test script and launching 
+top manually as "top -d4".
