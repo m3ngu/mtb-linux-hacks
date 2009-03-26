@@ -192,6 +192,7 @@ void switch_uid(struct user_struct *new_user)
 	atomic_inc(&new_user->processes);
 	atomic_dec(&old_user->processes);
 	switch_uid_keyring(new_user);
+	uwrr_switch_user(current, new_user);
 	current->user = new_user;
 	free_uid(old_user);
 	suid_keys(current);

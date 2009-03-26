@@ -784,6 +784,7 @@ static void deactivate_task(struct task_struct *p, runqueue_t *rq)
 	if (SCHED_UWRR == p->policy) {
 		 /* printk(KERN_INFO "deactivation for UWRR for %d in progress\n", p->tgid); */
 		rq->uwrr_running--;
+		/* XXX remove user from queue if last process */
 	}
 	dequeue_task(p, p->array);
 	p->array = NULL;
@@ -5212,6 +5213,22 @@ asmlinkage long sys_setuserweight(int uid, int weight) {
 	if ( -1 != uid ) free_uid(uptr);
 	return 0;
 }
+
+/* helper function for switch_uid in user.c: if a UWRR process has its owner 
+	changed, change its queue as well */
+
+void uwrr_switch_user(task_t *p,  struct user_struct *new_user) {
+	unsigned long flags;
+	runqueue_t *rq;
+	if ( likely(SCHED_UWRR != p->policy) ) return;
+	rq = task_rq_lock(p, &flags);
+	if (p->array) {
+		deactivate_task(p, rq);
+		__activate_task(p, rq);
+	}
+	task_rq_unlock(rq, &flags);
+}
+
 
 /**
  * helper/debug function, prints barrier list to KERN_INFO
