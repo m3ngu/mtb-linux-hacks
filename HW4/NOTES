@@ -48,3 +48,8 @@ Things to test:
 Things to do:
 	scheduler_tick
 	schedule
+
+THINGS TO PUT IN FINAL TEST SCRIPT:
+	multiple weights
+	setuid in process
+	weight change during process?
