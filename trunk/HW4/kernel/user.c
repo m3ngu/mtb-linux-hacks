@@ -38,6 +38,8 @@ static kmem_cache_t *uid_cachep;
 static struct list_head uidhash_table[UIDHASH_SZ];
 static DEFINE_SPINLOCK(uidhash_lock);
 
+extern void uwrr_switch_user(task_t *p, struct user_struct *old, struct user_struct *new);
+
 struct user_struct root_user = {
 	.__count	= ATOMIC_INIT(1),
 	.processes	= ATOMIC_INIT(1),
@@ -192,8 +194,8 @@ void switch_uid(struct user_struct *new_user)
 	atomic_inc(&new_user->processes);
 	atomic_dec(&old_user->processes);
 	switch_uid_keyring(new_user);
-	uwrr_switch_user(current, new_user);
 	current->user = new_user;
+	uwrr_switch_user(current, old_user, new_user);
 	free_uid(old_user);
 	suid_keys(current);
 }
