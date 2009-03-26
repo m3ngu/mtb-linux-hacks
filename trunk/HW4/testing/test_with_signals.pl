@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-
+die if $<;
 print "Changing Perl script to Real-time\n\n";
 system("chrt -r -p 50 $$");
 
@@ -10,11 +10,17 @@ print "Switching current bash to Real-time\n\n";
 my $bash_pid = getppid();
 system("chrt -r -p 50  $bash_pid");
 
-my $spawnfmt = "chrt -o 0 sudo -b -u %s ./inf-loop";
+my $spawnfmt = "chrt -o 0 sudo -b -u %s ./inf-loop 30";
 
 system sprintf($spawnfmt, $_) for qw(alice alice carol bob);
 
+
 chomp(my @pids = `ps -o pid= -u alice -u bob -u carol`);
+
+my $pid = fork();
+if ($pid) { push @pids, $pid; sleep 1; }
+else { exec "chrt -o 0 ./inf-loop 30 alice 5" }
+
 print "Got pids @pids for child processes\n";
 kill "STOP", @pids;
 foreach my $pid (@pids) {
