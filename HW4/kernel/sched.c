@@ -782,9 +782,11 @@ static void deactivate_task(struct task_struct *p, runqueue_t *rq)
 {
 	rq->nr_running--;
 	if (SCHED_UWRR == p->policy) {
-		 /* printk(KERN_INFO "deactivation for UWRR for %d in progress\n", p->tgid); */
 		rq->uwrr_running--;
-		/* XXX remove user from queue if last process */
+		/* remove user from queue if last process */
+		if ( 1 == p->array->nr_active ) {
+			list_del_init(&p->user->uwrr_list);
+		}
 	}
 	dequeue_task(p, p->array);
 	p->array = NULL;
