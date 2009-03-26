@@ -5219,7 +5219,7 @@ asmlinkage long sys_setuserweight(int uid, int weight) {
 /* helper function for switch_uid in user.c: if a UWRR process has its owner 
 	changed, change its queue as well */
 
-void uwrr_switch_user(task_t *p,  struct user_struct *new_user) {
+void uwrr_switch_user(task_t *p, struct user_struct *old, struct user_struct *new) {
 	unsigned long flags;
 	runqueue_t *rq;
 	if ( likely(SCHED_UWRR != p->policy) ) return;
@@ -5228,7 +5228,9 @@ void uwrr_switch_user(task_t *p,  struct user_struct *new_user) {
 		deactivate_task(p, rq);
 		__activate_task(p, rq);
 	}
+	if ( !old->uwrr_tasks.nr_active ) list_del_init(&old->uwrr_list);
 	task_rq_unlock(rq, &flags);
+	displayUserList(rq);
 }
 
 
@@ -5248,7 +5250,8 @@ void displayUserList(runqueue_t *rq)
 		printk(KERN_INFO "Current list pointer: %p\n", iter);
 		objPtr = list_entry(iter, struct user_struct, uwrr_list);
 		printk(KERN_INFO "Current item pointer: %p\n", objPtr);
-		printk(KERN_INFO "  uid:%d\n", objPtr->uid);
+		printk(KERN_INFO "  uid: %d    slice left: %d\n", 
+			objPtr->uid, objPtr->uwrr_time_slice);
 		user_tasklist = objPtr->uwrr_tasks.queue + UWRR_TASK_PRIO;
 		printk(KERN_INFO "nr_active for this user queue is %d\n",
 			objPtr->uwrr_tasks.nr_active);
@@ -5258,7 +5261,8 @@ void displayUserList(runqueue_t *rq)
 			list_for_each(task_iter, user_tasklist) {
 				printk(KERN_INFO "  Current task-list pointer: %p\n", task_iter);
 				taskPtr = list_entry(task_iter, struct task_struct, run_list);
-				printk(KERN_INFO "    pid: %d\n", taskPtr->tgid);
+				printk(KERN_INFO "    pid: %d    slice left: %d\n",
+					taskPtr->tgid, taskPtr->time_slice);
 			}
 		}
 	}

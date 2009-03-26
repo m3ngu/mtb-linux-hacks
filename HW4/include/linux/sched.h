@@ -715,11 +715,6 @@ static inline pid_t process_group(struct task_struct *tsk)
 	return tsk->signal->pgrp;
 }
 
-/* XXX also needs to be in sched_user.h... only it requires information that's 
-	in this file *and* in that file, which is slightly difficult to resolve... 
-*/
-void uwrr_switch_user(task_t *p,  struct user_struct *new_user);
-
 
 /**
  * pid_alive - check that a task structure is not stale
