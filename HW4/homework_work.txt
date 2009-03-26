@@ -89,7 +89,7 @@ Specific changes:
 
 General design options were hashed out in a three-way meeting at the
 beginning of break.  System call tests and the bulk of the modifications
-to user.c and sched.c were written by Ben.  Scheduling tests and related code
-were written by Mengu.  Huge amounts of painful debugging and tracing work was
-done jointly by Mengu and Ben, and testing was done jointly in a three-way 
-meeting.
+to user.c and sched.c were written by Ben.  Scheduling tests and related
+code were written by Mengu.  Huge amounts of painful debugging and
+tracing work was done jointly by Mengu and Ben, and final debugging and
+testing was done jointly in a three-way meeting.
