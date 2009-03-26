@@ -1,0 +1,67 @@
+
+                     W4118 Spring 2009 Working Assignment
+
+Assignment Number:	4
+   
+GroupID Number:     2        
+                         
+VMware VM (hostname/vmware#/IP): N/A
+
+   We certify that:
+     * The code submitted here compiles properly and runs without
+       crashing.
+     * While we may have discussed the assignment with others, the code
+       submitted is entirely our own group's work and no other student 
+       has edited it.
+     * So far as we have been able to determine, the program properly
+       handles all reasonable inputs.
+       
+   Name of Group Member 1: Thierry Bertin-Mahieux
+   
+   Name of Group Member 2: Mengu Sukan
+
+   Name of Group Member 3: Benjamin Warfield
+   
+   Further instructions to the student: 
+     * Check your code to make sure it is readable. You may wish to
+       add some comments, change a variable name, or even restructure the
+       code. This also often helps you find bugs in the code.
+     * Check your code to make sure it is readable. You may wish to
+       add some comments, change a variable name, or even restructure the
+       code. This also often helps you find bugs in the code.
+     * Print your code out and make sure that all the lines fit on the
+       page without wrapping.
+     * Include this file with the files you submit for your
+       programming assignment.  The file should be named "homework_work.txt".
+     * Describe below how each member of your group contributed to the
+       assignment.  Include a list of C functions and files that you modified
+       or implemented and which group member was primarily responsible
+       for doing each.  All group members are expected to contribute in
+       writing the code for each assignment.
+       
+Member Contributions:
+
+Modified files:
+    arch/i386/kernel/entry.S
+        added entries to syscall_table (including many spacers)
+    include/asm-i386/unistd.h
+        added __NR_*userweight macros and updated __NR_syscalls
+    include/linux/syscalls.h
+        added declarations for sys_getuserweight and sys_setuserweight
+    include/linux/sched.h
+    kernel/sched.c
+    kernel/user.c
+
+New Files:
+	(none in kernel tree)
+	testing/Makefile	- Makefile for demonstration/test code	
+	testing/change_scheduler.c	- utility to change the scheduler of a process
+	testing/change_userweight.c	- utility to change the weight of a user
+	testing/syscall_tests.c	- test/demo program for new system calls
+	testing/infinite_loop.c	- cpu-bound program for UWRR scheduling demo
+	testing/setup.sh	- setup script for UWRR scheduling demo
+	testing/test_with_signals.pl	- main driver script for scheduling demo
+		
+
+Specific changes:
+

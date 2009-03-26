@@ -23,7 +23,7 @@ inf-loop: infinite_loop.c
 	$(CC) $(CFLAGS) -o $@ $^ 
 
 test: test-syscalls
-	./$^
+	./test-syscalls && ./setup.sh && ./test_with_signals.pl
 
 clean:
 	rm -f $(BIN)
