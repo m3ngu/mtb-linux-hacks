@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 
+
 die "You must be root to run this script\n" if $<;
 print "Changing Perl script to Real-time\n\n";
 system("chrt -r -p 50 $$");
@@ -18,9 +19,14 @@ system sprintf($spawnfmt, $_) for qw(alice alice carol bob);
 
 chomp(my @pids = `ps -o pid= -u alice -u bob -u carol`);
 
+print "Launching loop as root for setuid test\n";
 my $pid = fork();
-if ($pid) { push @pids, $pid; sleep 1; }
-else { exec "chrt -o 0 ./inf-loop 30 alice 5" }
+if ($pid) {
+	push @pids, $pid;
+	sleep 1;
+} else { 
+	exec "chrt -o 0 ./inf-loop 30 alice 5";
+}
 
 print "Got pids @pids for child processes\n";
 kill "STOP", @pids;
