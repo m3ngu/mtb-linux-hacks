@@ -179,6 +179,7 @@ static int shrink_slab(unsigned long scanned, unsigned int gfp_mask,
 {
 	struct shrinker *shrinker;
 
+	printk(KERN_INFO "HW5: shrink_slab\n");
 	if (scanned == 0)
 		scanned = SWAP_CLUSTER_MAX;
 
@@ -351,6 +352,7 @@ static int shrink_list(struct list_head *page_list, struct scan_control *sc)
 	int pgactivate = 0;
 	int reclaimed = 0;
 
+	printk(KERN_INFO "HW5: shrink_list\n");
 	cond_resched();
 
 	pagevec_init(&freed_pvec, 1);
@@ -544,7 +546,6 @@ static void shrink_cache(struct zone *zone, struct scan_control *sc)
 	int max_scan = sc->nr_to_scan;
 	
 	/* HW5 */
-	printk("HW5: shrink_cache()\n");
 	printk(KERN_INFO "HW5: shrink_cache()\n");
 
 	pagevec_init(&pvec, 1);
@@ -558,7 +559,7 @@ static void shrink_cache(struct zone *zone, struct scan_control *sc)
 		int nr_freed;
 
 		/* HW5 */
-		printk("HW5: shrink_cache, 1st while, max_scan=%i\n",max_scan);
+		printk(KERN_INFO "HW5: shrink_cache, 1st while, max_scan=%i\n",max_scan);
 
 		while (nr_scan++ < SWAP_CLUSTER_MAX &&
 				!list_empty(&zone->inactive_list)) {
@@ -660,6 +661,7 @@ refill_inactive_zone(struct zone *zone, struct scan_control *sc)
 	long mapped_ratio;
 	long distress;
 	long swap_tendency;
+	printk(KERN_INFO "HW5: refill_inactive_zone\n");
 
 	lru_add_drain();
 	pgmoved = 0;
@@ -800,7 +802,7 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 {
 	unsigned long nr_active;
 	unsigned long nr_inactive;
-
+	printk(KERN_INFO "HW5: shrink_zone()\n");
 	/*
 	 * Add one to `nr_to_scan' just to make sure that the kernel will
 	 * slowly sift through the active list.
@@ -861,6 +863,8 @@ shrink_caches(struct zone **zones, struct scan_control *sc)
 {
 	int i;
 
+	printk(KERN_INFO "HW5: shrink_caches\n");
+
 	for (i = 0; zones[i] != NULL; i++) {
 		struct zone *zone = zones[i];
 
@@ -901,6 +905,8 @@ int try_to_free_pages(struct zone **zones,
 	struct scan_control sc;
 	unsigned long lru_pages = 0;
 	int i;
+
+	printk(KERN_INFO "HW5: try_to_free_pages\n");
 
 	sc.gfp_mask = gfp_mask;
 	sc.may_writepage = 0;
