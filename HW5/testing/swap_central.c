@@ -28,6 +28,8 @@ int main(int argc, char *argv[]) {
 			perror("Allocation failed");
 			exit(2);
 		}
+		// Produces a random integer between 0 and 1023 by masking
+		// a 32-bit integers all but last 9 digits
 		int charcount = rand() & 1023;
 		for (int j = 0; j < charcount; j++) {
 			new->space_waster[j] = 'a';
