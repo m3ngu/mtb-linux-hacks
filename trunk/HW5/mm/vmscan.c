@@ -545,6 +545,7 @@ static void shrink_cache(struct zone *zone, struct scan_control *sc)
 	
 	/* HW5 */
 	printk("HW5: shrink_cache()\n");
+	printk(KERN_INFO "HW5: shrink_cache()\n");
 
 	pagevec_init(&pvec, 1);
 
