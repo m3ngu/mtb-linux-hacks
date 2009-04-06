@@ -538,9 +538,13 @@ keep:
  */
 static void shrink_cache(struct zone *zone, struct scan_control *sc)
 {
+
 	LIST_HEAD(page_list);
 	struct pagevec pvec;
 	int max_scan = sc->nr_to_scan;
+	
+	/* HW5 */
+	printk("HW5: shrink_cache()\n");
 
 	pagevec_init(&pvec, 1);
 
@@ -551,6 +555,9 @@ static void shrink_cache(struct zone *zone, struct scan_control *sc)
 		int nr_taken = 0;
 		int nr_scan = 0;
 		int nr_freed;
+
+		/* HW5 */
+		printk("HW5: shrink_cache, 1st while, max_scan=%i\n",max_scan);
 
 		while (nr_scan++ < SWAP_CLUSTER_MAX &&
 				!list_empty(&zone->inactive_list)) {
@@ -581,6 +588,8 @@ static void shrink_cache(struct zone *zone, struct scan_control *sc)
 		if (nr_taken == 0)
 			goto done;
 
+		/* HW5 */
+		printk("HW5: shrink_cache(), nr_scan=%i\n",nr_scan);
 		max_scan -= nr_scan;
 		if (current_is_kswapd())
 			mod_page_state_zone(zone, pgscan_kswapd, nr_scan);
