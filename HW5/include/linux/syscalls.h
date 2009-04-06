@@ -507,7 +507,7 @@ asmlinkage long sys_keyctl(int cmd, unsigned long arg2, unsigned long arg3,
 			   unsigned long arg4, unsigned long arg5);
 
 /* added for HW5 */
-asmlinkage long sys_set_cachepolicy(int policy)
+asmlinkage long sys_set_cachepolicy(int policy);
 
 
 #endif
