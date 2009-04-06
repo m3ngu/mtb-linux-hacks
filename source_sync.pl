@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-my $hwk_no = shift || 3;
+my $hwk_no = shift || 5;
 my $SOURCE_PATH = "/usr/src/linux-2.6.11.12-hwk$hwk_no";
 my $REPO_PATH = "/mnt/hgfs/kernel_homework/HW$hwk_no";
 open MANIFEST, "<$REPO_PATH/MANIFEST";
