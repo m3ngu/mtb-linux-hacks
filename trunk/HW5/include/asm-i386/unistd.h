@@ -297,7 +297,7 @@
 /* added for HW5 */
 #define __NR_set_cachepolicy    289
 
-#define NR_syscalls 289
+#define NR_syscalls 290
 
 /*
  * user-visible error numbers are in the range -1 - -128: see
