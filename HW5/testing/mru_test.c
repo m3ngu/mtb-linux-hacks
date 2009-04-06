@@ -22,7 +22,7 @@ _syscall1(int, set_cachepolicy, int, policy)
 
 int main() {
 
-  printf("we call set_cachepolicy");
+  printf("we call set_cachepolicy\n");
   
   set_cachepolicy(1);
 
