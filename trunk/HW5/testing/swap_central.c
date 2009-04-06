@@ -35,7 +35,21 @@ int main(int argc, char *argv[]) {
 		new->space_waster[charcount] = '\0';
 		new->next = &head;
 		new->prev = head.prev;
+		head.prev->next = new;
 		head.prev = new;
+	}
+	
+	struct circular_illogic *cur = &head;
+	for (int i = 0; /* muahahaha!!! */ ; i++) {
+		cur = cur->next;
+		int unused = strlen(cur->space_waster);
+		if ( ! ( i % 10000) ) {
+			printf("In step %d: string length is %d\n", i , unused);
+		}
+		if ( &head == cur ) {
+			printf("In step %d: passing Go! (Can I have $200?)\n", i);
+		}
+	
 	}
 	
 	
