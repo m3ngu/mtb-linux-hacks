@@ -893,33 +893,6 @@ ENTRY(sys_call_table)
 	/* our system call here at 289 */
 	.long sys_set_cachepolicy
 	/* *************************** */
-	.long sys_ni_syscall 		/* 290 */
-	.long sys_ni_syscall
-	.long sys_ni_syscall
-	.long sys_ni_syscall
-	.long sys_ni_syscall
-	.long sys_ni_syscall		/* 295 */
-	.long sys_ni_syscall
-	.long sys_ni_syscall
-	.long sys_ni_syscall
-	.long sys_ni_syscall
-	.long sys_ni_syscall		/* 300 */
-	.long sys_ni_syscall
-	.long sys_ni_syscall
-	.long sys_ni_syscall
-	.long sys_ni_syscall
-	.long sys_ni_syscall		/* 305 */
-	.long sys_ni_syscall
-	.long sys_ni_syscall
-	.long sys_ni_syscall
-	.long sys_ni_syscall
-	.long sys_ni_syscall		/* 310 */
-	.long sys_ni_syscall
-	.long sys_ni_syscall
-	.long sys_ni_syscall
-	.long sys_ni_syscall
-	.long sys_ni_syscall		/* 315 */
-	.long sys_ni_syscall
-	.long sys_ni_syscall
-		
+
+			
 syscall_table_size=(.-sys_call_table)
