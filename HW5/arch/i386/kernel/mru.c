@@ -19,7 +19,7 @@
 /**
  * change the memory management policy
  */
-asmlinkage int sys_cachepolicy(int policy)
+asmlinkage int sys_set_cachepolicy(int policy)
 {
   printk("sys_cachepolicy in linux/mru.c, not implemented yet\n");
   return -1;
