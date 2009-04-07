@@ -8,14 +8,27 @@
 #include <stdio.h>
 #include <string.h>
 
+/*
+	Uselessly large circular doubly-linked list structure.  We will 
+	create lots of them.
+*/
+
 struct circular_illogic {
 	struct circular_illogic *prev;
 	struct circular_illogic *next;
 	char space_waster[2048];
 };
 
+/*
+	Usage: swap-central [ list_size [ scans ] ]
+		Will create a circular list of the given size (or 10000)
+		then scan through the entire list the given number of times (or 5)
+*/
+
 int main(int argc, char *argv[]) {
 	int total_list_members = argc > 1 ? atoi(argv[1]) : 10000;
+	int iterations = argc > 2 ? atoi(argv[2]) : 5;
+	/* infinite loop on -1?  But how? */
 	struct circular_illogic head;
 	head.prev = &head;
 	head.next = &head;
@@ -42,7 +55,7 @@ int main(int argc, char *argv[]) {
 	}
 	
 	struct circular_illogic *cur = &head;
-	for (int i = 0; /* muahahaha!!! */ ; i++) {
+	for (int i = 0; i < total_list_members * iterations ; i++) {
 		cur = cur->next;
 		int unused = strlen(cur->space_waster);
 		if ( ! ( i % 10000) ) {
