@@ -661,7 +661,9 @@ refill_inactive_zone(struct zone *zone, struct scan_control *sc)
 	long mapped_ratio;
 	long distress;
 	long swap_tendency;
-	printk(KERN_INFO "HW5: refill_inactive_zone\n");
+	printk(KERN_INFO "HW5: refill_inactive_zone, zone %d, prio %u\n",
+		zone_idx(zone), sc->priority
+	);
 
 	lru_add_drain();
 	pgmoved = 0;
@@ -792,6 +794,7 @@ refill_inactive_zone(struct zone *zone, struct scan_control *sc)
 
 	mod_page_state_zone(zone, pgrefill, pgscanned);
 	mod_page_state(pgdeactivate, pgdeactivate);
+	printk(KERN_INFO "HW5: refill deactivated %d pages\n", pgdeactivate);
 }
 
 /*
@@ -802,7 +805,11 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 {
 	unsigned long nr_active;
 	unsigned long nr_inactive;
-	printk(KERN_INFO "HW5: shrink_zone()\n");
+	printk(KERN_INFO "HW5: shrink_zone zone: %d, prio: %u, act: %lu, inact: %lu, scan_act: %lu, scan_inact: %lu\n",
+		zone_idx(zone), sc->priority,
+		zone->nr_active, zone->nr_inactive, 
+		zone->nr_scan_active, zone->nr_scan_inactive
+	);
 	/*
 	 * Add one to `nr_to_scan' just to make sure that the kernel will
 	 * slowly sift through the active list.
@@ -840,6 +847,9 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 				break;
 		}
 	}
+	printk(KERN_INFO "HW5: done with zone: reclaimed %lu, act %lu, inact %lu\n", 
+		sc->nr_reclaimed, zone->nr_active, zone->nr_inactive
+	);
 }
 
 /*
@@ -877,7 +887,10 @@ shrink_caches(struct zone **zones, struct scan_control *sc)
 
 		if (zone->all_unreclaimable && sc->priority != DEF_PRIORITY)
 			continue;	/* Let kswapd poll it */
-
+		printk(KERN_INFO "HW5: calling shrink_zone; zone %d; priority %d\n",
+			i, sc->priority
+		);
+		
 		shrink_zone(zone, sc);
 	}
 }
