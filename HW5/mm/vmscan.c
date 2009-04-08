@@ -33,10 +33,38 @@
 #include <linux/notifier.h>
 #include <linux/rwsem.h>
 
+/* added for HW5 */
+#include <linux/hw5_definitions.h>
+
 #include <asm/tlbflush.h>
 #include <asm/div64.h>
 
 #include <linux/swapops.h>
+
+
+/* added for HW5 - use MRU, if false use normal LRU */
+static int USE_MRU_POLICY = 0;
+
+/**
+ * change the memory management policy
+ */
+asmlinkage int sys_set_cachepolicy(int policy)
+{
+  printk(KERN_INFO "calling set_cachepolicy, policy=%i\n", policy);
+  if (policy == CACHE_NORMAL)
+    {
+      USE_MRU_POLICY = 0;
+      return 0;
+    }
+  if (policy == CACHE_MRU)
+    {
+      USE_MRU_POLICY = 1;
+      return 0;
+    }
+  return -EINVAL;
+}
+
+
 
 /* possible outcome of pageout() */
 typedef enum {
