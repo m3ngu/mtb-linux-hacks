@@ -77,7 +77,7 @@
 #define PG_nosave_free		19	/* Free, should not be written */
 
 /* added for HW5 */
-#define PG_mruvictim            20      /* you're on the safety list, youhou! *
+#define PG_mruvictim            20      /* you're on the safety list, youhou! */
 
 
 
