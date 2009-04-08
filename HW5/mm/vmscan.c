@@ -825,6 +825,34 @@ refill_inactive_zone(struct zone *zone, struct scan_control *sc)
 	printk(KERN_INFO "HW5: refill deactivated %d pages\n", pgdeactivate);
 }
 
+
+void scan_active_for_mru(struct zone *zone, struct scan_control *sc) {
+	int scan_records = sc->nr_to_scan;
+	struct list_head *active_list = &zone->active_list;
+	struct list_head *cur = active_list;
+	int locked_pages = 0, 
+		refed_pages = 0, 
+		dirtypages = 0,
+		privatepages = 0,
+		diskpages = 0,
+		swapcache = 0,
+		anonpages = 0;
+	int i = 0;
+	for (i = 0; i < scan_records; i++) {
+		cur = cur->next;
+		struct page *thispage = list_entry(cur, struct page, lru);
+		if ( PageLocked(thispage) ) 	locked_pages++;
+		if ( PageReferenced(thispage) )	refed_pages++;
+		if ( PageDirty(thispage) )  	dirtypages++;
+		if ( PagePrivate(thispage) )	privatepages++;
+		if ( PageMappedToDisk(thispage) ) diskpages++;
+		if ( PageSwapCache(thispage) ) 	swapcache++;
+		if ( PageAnon(thispage) )   	anonpages++;
+	}
+	printk(KERN_INFO "HW5 activity scan of %d records found: %d locked, %d refed, %d dirty, %d private, %d ondisk, %d swapcache, %d anon\n",
+		scan_records, locked_pages, refed_pages, dirtypages, privatepages, diskpages, swapcache, anonpages);
+}
+
 /*
  * This is a basic per-zone page freer.  Used by both kswapd and direct reclaim.
  */
@@ -863,6 +891,7 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 			sc->nr_to_scan = min(nr_active,
 					(unsigned long)SWAP_CLUSTER_MAX);
 			nr_active -= sc->nr_to_scan;
+			scan_active_for_mru(zone, sc);
 			refill_inactive_zone(zone, sc);
 		}
 
