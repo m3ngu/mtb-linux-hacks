@@ -1,6 +1,5 @@
 arch/i386/kernel/entry.S
 arch/i386/kernel/Makefile
-arch/i386/kernel/mru.c
 include/asm-i386/unistd.h
 include/linux/syscalls.h
 mm/vmscan.c
@@ -8,3 +7,4 @@ include/linux/hw5_definitions.h
 include/linux/mmzone.h
 mm/page_alloc.c
 mm/swap.c
+include/linux/page-flags.h
