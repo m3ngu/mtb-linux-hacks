@@ -8,3 +8,4 @@ include/linux/mmzone.h
 mm/page_alloc.c
 mm/swap.c
 include/linux/page-flags.h
+include/linux/mm_inline.h
