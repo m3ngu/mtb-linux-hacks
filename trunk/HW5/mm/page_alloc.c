@@ -1642,6 +1642,8 @@ static void __init free_area_init_core(struct pglist_data *pgdat,
 				zone_names[j], realsize, batch);
 		INIT_LIST_HEAD(&zone->active_list);
 		INIT_LIST_HEAD(&zone->inactive_list);
+		/* added for HW5 */
+		INIT_LIST_HEAD(&zone->safety_list);
 		zone->nr_scan_active = 0;
 		zone->nr_scan_inactive = 0;
 		zone->nr_active = 0;
