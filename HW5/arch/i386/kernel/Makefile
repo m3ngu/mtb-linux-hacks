@@ -10,7 +10,7 @@ obj-y	:= process.o semaphore.o signal.o entry.o traps.o irq.o vm86.o \
 		doublefault.o quirks.o
 
 # added by students
-obj-y += mru.o
+#obj-y += mru.o
 # *****************
 
 obj-y				+= cpu/
