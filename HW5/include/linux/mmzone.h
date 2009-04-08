@@ -20,6 +20,8 @@
 #define MAX_ORDER CONFIG_FORCE_MAX_ZONEORDER
 #endif
 
+
+
 struct free_area {
 	struct list_head	free_list;
 	unsigned long		nr_free;
@@ -136,6 +138,10 @@ struct zone {
 	spinlock_t		lru_lock;	
 	struct list_head	active_list;
 	struct list_head	inactive_list;
+	
+	/* added HW5 */
+	struct list_head        safety_list;
+
 	unsigned long		nr_scan_active;
 	unsigned long		nr_scan_inactive;
 	unsigned long		nr_active;
