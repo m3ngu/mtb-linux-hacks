@@ -141,6 +141,7 @@ struct zone {
 	
 	/* added HW5 */
 	struct list_head        safety_list;
+	unsigned long           nr_safety;
 
 	unsigned long		nr_scan_active;
 	unsigned long		nr_scan_inactive;
