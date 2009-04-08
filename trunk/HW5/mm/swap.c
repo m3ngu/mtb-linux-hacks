@@ -106,6 +106,11 @@ void fastcall activate_page(struct page *page)
 	spin_lock_irq(&zone->lru_lock);
 	if (PageLRU(page) && !PageActive(page)) {
 		del_page_from_inactive_list(zone, page);
+		/* HW5 note to self:
+		   del_page_from_inactive_list can almost be used, but it
+		   decrement the counter of pages in inactive list,
+		   must find a way to cancel that. Another page flag?
+		*/
 		SetPageActive(page);
 		add_page_to_active_list(zone, page);
 		inc_page_state(pgactivate);
