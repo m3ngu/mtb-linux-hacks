@@ -4,3 +4,4 @@ arch/i386/kernel/mru.c
 include/asm-i386/unistd.h
 include/linux/syscalls.h
 mm/vmscan.c
+include/linux/hw5_definitions.h
