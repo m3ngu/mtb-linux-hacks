@@ -76,6 +76,10 @@
 #define PG_reclaim		18	/* To be reclaimed asap */
 #define PG_nosave_free		19	/* Free, should not be written */
 
+/* added for HW5 */
+#define PG_mruvictim            20      /* you're on the safety list, youhou! *
+
+
 
 /*
  * Global page accounting.  One instance per CPU.  Only unsigned longs are
@@ -160,6 +164,13 @@ extern void __mod_page_state(unsigned offset, unsigned long delta);
 			offset = offsetof(struct page_state, member##_dma);	\
 		__mod_page_state(offset, (delta));				\
 	} while (0)
+
+
+/* added for HW5 - manipulation fo our mruvictim flag */
+#define MRUVictim(page) test_bit(PG_mruvictim, &(page)->flags)
+#define SetMRUVictim(page) set_bit(PG_mruvictim, &(page)->flags)
+#define ClearMRUVictim(page) clear_bit(PG_mruvictim, &(page)->flags)
+
 
 /*
  * Manipulation of page state flags
