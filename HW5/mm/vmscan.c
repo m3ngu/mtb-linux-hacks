@@ -848,9 +848,24 @@ void scan_active_for_mru(struct zone *zone, struct scan_control *sc) {
 		if ( PageMappedToDisk(thispage) ) diskpages++;
 		if ( PageSwapCache(thispage) ) 	swapcache++;
 		if ( PageAnon(thispage) )   	anonpages++;
+		del_page_from_active_list(zone, thispage);
+		add_page_to_safety_list(zone, thispage);
 	}
 	printk(KERN_INFO "HW5 activity scan of %d records found: %d locked, %d refed, %d dirty, %d private, %d ondisk, %d swapcache, %d anon\n",
 		scan_records, locked_pages, refed_pages, dirtypages, privatepages, diskpages, swapcache, anonpages);
+}
+
+void clear_safety_list(struct zone *zone, struct scan_control *sc) {
+	int i = 0;
+	printk(KERN_INFO "HW5: clearing %lu pages from safety list\n", 
+		zone->nr_safety);
+	struct page *thispage, *tmp;
+	
+	list_for_each_entry_safe(thispage, tmp, &zone->safety_list, lru) {
+		activate_page(thispage);
+		i++;
+	}
+	printk(KERN_INFO "HW5: removed %d pages from safety list\n", i);
 }
 
 /*
@@ -888,6 +903,7 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 
 	while (nr_active || nr_inactive) {
 		if (nr_active) {
+			clear_safety_list(zone, sc);
 			sc->nr_to_scan = min(nr_active,
 					(unsigned long)SWAP_CLUSTER_MAX);
 			nr_active -= sc->nr_to_scan;
