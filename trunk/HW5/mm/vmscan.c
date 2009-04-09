@@ -967,11 +967,14 @@ void scan_active_for_mru(struct zone *zone, struct scan_control *sc) {
 	spin_unlock_irq(&zone->lru_lock);
 
 	// get stuff from inactive
+	if (to_grab_from_inactive > 0)
+	  printk("HW5: try to get %i pages from INACTIVE\n", to_grab_from_inactive);
 	while(to_grab_from_inactive > 0)
 	  {
-	    struct list_head firstpage = &zone->inactive_list->next;
+	    struct list_head *firstpage = (&zone->inactive_list)->next;
 	    if (firstpage != &zone->inactive_list)
 	      activate_page( list_entry(firstpage,struct page, lru)  );
+	    to_grab_from_inactive--;
 	  }
 }
 
