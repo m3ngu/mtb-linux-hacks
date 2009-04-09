@@ -575,6 +575,7 @@ static void shrink_cache_mru(struct zone *zone, struct scan_control *sc)
 		int nr_taken = 0;
 		int nr_scan = 0;
 		int nr_freed;
+                int bens_var = 0;
 
 		/* HW5 */
 		printk(KERN_INFO "HW5: shrink_cache_mru, 1st while, max_scan=%i\n",max_scan);
@@ -589,6 +590,7 @@ static void shrink_cache_mru(struct zone *zone, struct scan_control *sc)
 			if (!TestClearPageLRU(page))
 				BUG();
 			list_del(&page->lru);
+                        ClearMRUVictim(page);
 			if (get_page_testone(page)) {
 				/*
 				 * It is being freed elsewhere
@@ -596,12 +598,15 @@ static void shrink_cache_mru(struct zone *zone, struct scan_control *sc)
 				__put_page(page);
 				SetPageLRU(page);
 				list_add(&page->lru, &zone->safety_list);
+                                SetMRUVictim(page);
+                                bens_var++;
 				continue;
 			}
 			list_add(&page->lru, &page_list);
 			nr_taken++;
 		}
 		zone->nr_safety -= nr_taken;
+                printk("HW5: shrink_cache_mru(), zone->nr_safety=%lu, nr_taken=%i, bens_var=%i\n", zone->nr_safety, nr_taken, bens_var);
 		zone->pages_scanned += nr_scan;
 		spin_unlock_irq(&zone->lru_lock);
 
@@ -1007,6 +1012,8 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 {
 	unsigned long nr_active;
 	unsigned long nr_inactive;
+        unsigned long nr_safety;
+
 	printk(KERN_INFO "HW5: shrink_zone zone: %d, prio: %u, act: %lu, inact: %lu, scan_act: %lu, scan_inact: %lu, safety: %lu\n",
 		zone_idx(zone), sc->priority,
 		zone->nr_active, zone->nr_inactive, 
@@ -1030,15 +1037,17 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 		zone->nr_scan_inactive = 0;
 	else
 		nr_inactive = 0;
+        
+        nr_safety = zone->nr_safety;
 
 	sc->nr_to_reclaim = SWAP_CLUSTER_MAX;
 
-	while (nr_active || nr_inactive || zone->nr_safety) {
+	while (nr_active || nr_inactive || nr_safety) {
 		if (nr_active) {
 			sc->nr_to_scan = min(nr_active,
 					(unsigned long)SWAP_CLUSTER_MAX);
 			if ( USE_MRU_POLICY ) {
-				clear_safety_list(zone, sc);
+				//clear_safety_list(zone, sc);
 				// nr_active -= sc->nr_to_scan;
 				scan_active_for_mru(zone, sc);
 			} else {
@@ -1057,13 +1066,19 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 				break;
 		}
 
-                if (zone->nr_safety) {
-                        sc->nr_to_scan = min(zone->nr_safety,
+                if (nr_safety) {
+                        printk(KERN_INFO "HW5: nr_safety: %lu\n", nr_safety);
+                        sc->nr_to_scan = min(nr_safety,
 					(unsigned long)SWAP_CLUSTER_MAX);
-                        zone->nr_safety -= sc->nr_to_scan;
+                        nr_safety -= sc->nr_to_scan;
 			shrink_cache_mru(zone, sc);
 			if (sc->nr_to_reclaim <= 0)
 				break;
+                        if (nr_safety > 10000000) {
+                                printk(KERN_INFO "HW5: OMG!!!! nr_safety shouldn't be < 0\n");
+                                USE_MRU_POLICY = 0;
+                                break;
+                        }
 
                 }
 	}
