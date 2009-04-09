@@ -1047,7 +1047,12 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 	else
 		nr_active = 0;
 
-	zone->nr_scan_inactive += (zone->nr_inactive >> sc->priority) + 1;
+        if (USE_MRU_POLICY) {
+            zone->nr_scan_inactive = 0; // Disables shrink_cache (i.e. LRU)
+        } else {
+            zone->nr_scan_inactive += (zone->nr_inactive >> sc->priority) + 1;
+        }
+
 	nr_inactive = zone->nr_scan_inactive;
 	if (nr_inactive >= SWAP_CLUSTER_MAX)
 		zone->nr_scan_inactive = 0;
