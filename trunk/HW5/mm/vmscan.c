@@ -852,6 +852,7 @@ void scan_active_for_mru(struct zone *zone, struct scan_control *sc) {
 		if ( PageSwapCache(thispage) ) 	swapcache++;
 		if ( PageAnon(thispage) )   	anonpages++;
 		del_page_from_active_list(zone, thispage);
+		ClearPageActive(thispage);
 		add_page_to_safety_list(zone, thispage);
 	}
 	printk(KERN_INFO "HW5 activity scan of %d records found: %d locked, %d refed, %d dirty, %d private, %d ondisk, %d swapcache, %d anon\n",
