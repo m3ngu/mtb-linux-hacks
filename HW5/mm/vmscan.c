@@ -959,7 +959,6 @@ void scan_active_for_mru(struct zone *zone, struct scan_control *sc) {
 	}
 	printk(KERN_INFO "HW5 activity scan of %d records found: %d locked, %d refed, %d dirty, %d private, %d ondisk, %d swapcache, %d anon\n",
 		i, locked_pages, refed_pages, dirtypages, privatepages, diskpages, swapcache, anonpages);
-
 	// hack to bring in stuff from the inactive list
 	unsigned long to_grab_from_inactive = 0;
 	if (list_size_target > zone->nr_active)
@@ -967,7 +966,7 @@ void scan_active_for_mru(struct zone *zone, struct scan_control *sc) {
 
 	// release lock
 	spin_unlock_irq(&zone->lru_lock);
-
+	safety_list_consistency(zone, sc);
 	// get stuff from inactive
 	if (to_grab_from_inactive > 0)
 	  printk("HW5: try to get %lu pages from INACTIVE\n", to_grab_from_inactive);
@@ -1034,10 +1033,12 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 {
 	unsigned long nr_active;
 	unsigned long nr_inactive;
-        unsigned long nr_safety;
-
-	printk(KERN_INFO "HW5: shrink_zone zone: %d, prio: %u, act: %lu, inact: %lu, scan_act: %lu, scan_inact: %lu, safety: %lu\n",
-		zone_idx(zone), sc->priority,
+	unsigned long nr_safety;
+	
+	int current_zone = zone_idx(zone);
+	printk(KERN_INFO "HW5: shrink_zone zone: %d, reclaimed: %lu, to_reclaim: %d, prio: %u, act: %lu, inact: %lu, scan_act: %lu, scan_inact: %lu, safety: %lu\n",
+		current_zone, 
+		sc->nr_reclaimed, sc->nr_to_reclaim, sc->priority,
 		zone->nr_active, zone->nr_inactive, 
 		zone->nr_scan_active, zone->nr_scan_inactive,
                 zone->nr_safety
@@ -1109,8 +1110,9 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 
                 }
 	}
-	printk(KERN_INFO "HW5: done with zone: reclaimed %lu, act %lu, inact %lu, safety: %lu\n", 
-		sc->nr_reclaimed, zone->nr_active, zone->nr_inactive, zone->nr_safety
+	printk(KERN_INFO "HW5: done with zone %d: reclaimed %lu, to_recl %d, act %lu, inact %lu, safety: %lu\n", 
+		current_zone, sc->nr_reclaimed, sc->nr_to_reclaim,
+		zone->nr_active, zone->nr_inactive, zone->nr_safety
 	);
 }
 
@@ -1149,8 +1151,8 @@ shrink_caches(struct zone **zones, struct scan_control *sc)
 
 		if (zone->all_unreclaimable && sc->priority != DEF_PRIORITY)
 			continue;	/* Let kswapd poll it */
-		printk(KERN_INFO "HW5: calling shrink_zone; zone %d; priority %d\n",
-			i, sc->priority
+		printk(KERN_INFO "HW5: calling shrink_zone; zone %d (or is it %d?); priority %d\n",
+			i, zone_idx(zone), sc->priority
 		);
 		
 		shrink_zone(zone, sc);
