@@ -52,7 +52,12 @@ del_page_from_lru(struct zone *zone, struct page *page)
 	if (PageActive(page)) {
 		ClearPageActive(page);
 		zone->nr_active--;
-	} else {
+	}
+	else if (MRUVictim(page)) {
+	  ClearMRUVictim(page);
+	  zone->nr_safety--;
+	}
+	else {
 		zone->nr_inactive--;
 	}
 }
