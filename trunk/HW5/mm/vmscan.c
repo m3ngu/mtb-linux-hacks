@@ -958,6 +958,27 @@ void scan_active_for_mru(struct zone *zone, struct scan_control *sc) {
 }
 
 
+/**
+ * Checks if zone->nr_safety is equal to the exact number of pages in the list
+ */
+int safety_list_consistency(struct zone *zone, struct scan_control *sc) {
+        unsigned long i = 0;
+	unsigned long official_count = 0;
+	struct page *thispage, *tmp;
+	// take the lock
+	spin_lock_irq(&zone->lru_lock);
+	official_count = zone->nr_safety;
+	list_for_each_entry_safe(thispage, tmp, &zone->safety_list, lru) {
+		i++;
+	}
+	// release lock
+	spin_unlock_irq(&zone->lru_lock);
+	if (i != official_count)
+	  return 0;
+	return 1;
+}
+
+
 void clear_safety_list(struct zone *zone, struct scan_control *sc) {
 	int i = 0;
 
