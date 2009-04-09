@@ -556,6 +556,7 @@ keep:
 	return reclaimed;
 }
 
+int safety_list_consistency(struct zone *, struct scan_control *);
 static void shrink_cache_mru(struct zone *zone, struct scan_control *sc)
 {
 
@@ -565,6 +566,7 @@ static void shrink_cache_mru(struct zone *zone, struct scan_control *sc)
 	
 	/* HW5 */
 	printk(KERN_INFO "HW5: shrink_cache_mru()\n");
+	BUG_ON(safety_list_consistency(zone,sc));
 
 	pagevec_init(&pvec, 1);
 
@@ -994,9 +996,13 @@ int safety_list_consistency(struct zone *zone, struct scan_control *sc) {
 	}
 	// release lock
 	spin_unlock_irq(&zone->lru_lock);
-	if (i != official_count)
-	  return 0;
-	return 1;
+	if (i != official_count) {
+		printk(KERN_ERR 
+			"HW5: inconsistent safety list! Actual %lu, theoretical %lu\n",
+			i, official_count);
+		return 1;
+	}
+	return 0;
 }
 
 
