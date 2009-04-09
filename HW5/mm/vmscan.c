@@ -924,10 +924,9 @@ refill_inactive_zone(struct zone *zone, struct scan_control *sc)
 
 void scan_active_for_mru(struct zone *zone, struct scan_control *sc) {
 
-        // take the lock
+	// take the lock
 	spin_lock_irq(&zone->lru_lock);
-
-	int scan_records = sc->nr_to_scan;
+	int list_size_target = sc->nr_to_reclaim + SWAP_CLUSTER_MAX;
 	struct list_head *active_list = &zone->active_list;
 	struct list_head *cur = active_list, 
 		*next = active_list->next;
@@ -940,7 +939,8 @@ void scan_active_for_mru(struct zone *zone, struct scan_control *sc) {
 		anonpages = 0;
 	int i = 0;
 	
-	for (i = 0; i < scan_records; i++) {
+	while (zone->nr_safety < list_size_target && zone->nr_active > 0) {
+		i++;
 		cur = next;
 		next = cur->next;
 		struct page *thispage = list_entry(cur, struct page, lru);
@@ -956,7 +956,7 @@ void scan_active_for_mru(struct zone *zone, struct scan_control *sc) {
 		add_page_to_safety_list(zone, thispage);
 	}
 	printk(KERN_INFO "HW5 activity scan of %d records found: %d locked, %d refed, %d dirty, %d private, %d ondisk, %d swapcache, %d anon\n",
-		scan_records, locked_pages, refed_pages, dirtypages, privatepages, diskpages, swapcache, anonpages);
+		i, locked_pages, refed_pages, dirtypages, privatepages, diskpages, swapcache, anonpages);
 
 	// release lock
 	spin_unlock_irq(&zone->lru_lock);
