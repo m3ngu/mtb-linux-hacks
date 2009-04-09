@@ -1081,8 +1081,11 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 			} else {
 				printk(KERN_INFO "HW5: not calling MRU functions\n");
 			}
-			nr_active -= sc->nr_to_scan;
-			refill_inactive_zone(zone, sc);
+			/* added HW5 */
+			if (!USE_MRU_POLICY || zone->nr_inactive < 2 * zone->nr_active) {
+			  nr_active -= sc->nr_to_scan;
+			  refill_inactive_zone(zone, sc);
+			}
 		}
 
 		if (nr_inactive) {
