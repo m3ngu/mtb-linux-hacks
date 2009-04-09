@@ -1,10 +1,8 @@
 
 
-/* barrier_test.c: various test/demonstration code for kernel barriers
-	2/25/09
+/* mru_test.c: temp test, check that the system call does something
+	4/04/09
 */
-#define _REENTRANT
-#define _XOPEN_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
