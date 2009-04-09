@@ -22,7 +22,9 @@ int main() {
   
   int res = set_cachepolicy(CACHE_NORMAL);
   if (res < 0)
-    return -1;
-    //perror("can't set cache policy to change normal? ");
+    {
+      perror("can't set cache policy to CACHE_NORMAL? ");
+      return -1;
+    }
   return 0;
 }
