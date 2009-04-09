@@ -13,6 +13,7 @@ del_page_from_safety_list(struct zone *zone, struct page *page)
 {
 	list_del(&page->lru);
 	zone->nr_safety--;
+	ClearMRUVictim(page);
 }
 /* end added HW5 */
 
