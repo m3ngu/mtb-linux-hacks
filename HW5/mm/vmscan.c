@@ -984,7 +984,7 @@ void scan_active_for_mru(struct zone *zone, struct scan_control *sc) {
  * Checks if zone->nr_safety is equal to the exact number of pages in the list
  */
 int safety_list_consistency(struct zone *zone, struct scan_control *sc) {
-        unsigned long i = 0;
+	unsigned long i = 0;
 	unsigned long official_count = 0;
 	struct page *thispage, *tmp;
 	// take the lock
@@ -1041,7 +1041,7 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 		sc->nr_reclaimed, sc->nr_to_reclaim, sc->priority,
 		zone->nr_active, zone->nr_inactive, 
 		zone->nr_scan_active, zone->nr_scan_inactive,
-                zone->nr_safety
+		zone->nr_safety
 	);
 	/*
 	 * Add one to `nr_to_scan' just to make sure that the kernel will
@@ -1094,21 +1094,21 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 				break;
 		}
 
-                if (nr_safety) {
-                        printk(KERN_INFO "HW5: nr_safety: %lu\n", nr_safety);
-                        sc->nr_to_scan = min(nr_safety,
+		if (nr_safety) {
+			printk(KERN_INFO "HW5: nr_safety: %lu\n", nr_safety);
+			sc->nr_to_scan = min(nr_safety,
 					(unsigned long)SWAP_CLUSTER_MAX);
-                        nr_safety -= sc->nr_to_scan;
+			nr_safety -= sc->nr_to_scan;
 			shrink_cache_mru(zone, sc);
 			if (sc->nr_to_reclaim <= 0)
 				break;
-                        if (nr_safety > 10000000) {
-                                printk(KERN_INFO "HW5: OMG!!!! nr_safety shouldn't be < 0\n");
-                                USE_MRU_POLICY = 0;
-                                break;
-                        }
+			if (nr_safety > 10000000) {
+				printk(KERN_INFO "HW5: OMG!!!! nr_safety shouldn't be < 0\n");
+				USE_MRU_POLICY = 0;
+				break;
+			}
 
-                }
+		}
 	}
 	printk(KERN_INFO "HW5: done with zone %d: reclaimed %lu, to_recl %d, act %lu, inact %lu, safety: %lu\n", 
 		current_zone, sc->nr_reclaimed, sc->nr_to_reclaim,
