@@ -1086,6 +1086,7 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 			  nr_active -= sc->nr_to_scan;
 			  refill_inactive_zone(zone, sc);
 			}
+			else {nr_active = 0;}
 		}
 
 		if (nr_inactive) {
