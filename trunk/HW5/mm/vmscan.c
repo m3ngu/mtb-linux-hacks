@@ -379,12 +379,17 @@ static int shrink_list(struct list_head *page_list, struct scan_control *sc)
 	struct pagevec freed_pvec;
 	int pgactivate = 0;
 	int reclaimed = 0;
+	
+	int jump411 = 0, jump418 = 0, jump429 = 0, jump448 = 0, jump450 = 0, jump513 = 0,
+		dirty = 0, dirtyclean = 0, jump531 = 0, tried = 0;
+		
 
 	printk(KERN_INFO "HW5: shrink_list\n");
 	cond_resched();
 
 	pagevec_init(&freed_pvec, 1);
 	while (!list_empty(page_list)) {
+		tried++;
 		struct address_space *mapping;
 		struct page *page;
 		int may_enter_fs;
@@ -405,13 +410,17 @@ static int shrink_list(struct list_head *page_list, struct scan_control *sc)
 		if (page_mapped(page) || PageSwapCache(page))
 			sc->nr_scanned++;
 
-		if (PageWriteback(page))
+		if (PageWriteback(page)) {
+			jump411++;
 			goto keep_locked;
+		}
 
 		referenced = page_referenced(page, 1, sc->priority <= 0);
 		/* In active use or really unfreeable?  Activate it. */
-		if (referenced && page_mapping_inuse(page))
+		if (referenced && page_mapping_inuse(page)) {
+			jump418++;	
 			goto activate_locked;
+		}
 
 #ifdef CONFIG_SWAP
 		/*
@@ -419,8 +428,10 @@ static int shrink_list(struct list_head *page_list, struct scan_control *sc)
 		 * Try to allocate it some swap space here.
 		 */
 		if (PageAnon(page) && !PageSwapCache(page)) {
-			if (!add_to_swap(page))
+			if (!add_to_swap(page)) {
+				jump429++;
 				goto activate_locked;
+			}
 		}
 #endif /* CONFIG_SWAP */
 
@@ -435,8 +446,10 @@ static int shrink_list(struct list_head *page_list, struct scan_control *sc)
 		if (page_mapped(page) && mapping) {
 			switch (try_to_unmap(page)) {
 			case SWAP_FAIL:
+				jump448++;
 				goto activate_locked;
 			case SWAP_AGAIN:
+				jump450++;
 				goto keep_locked;
 			case SWAP_SUCCESS:
 				; /* try to free the page below */
@@ -444,6 +457,7 @@ static int shrink_list(struct list_head *page_list, struct scan_control *sc)
 		}
 
 		if (PageDirty(page)) {
+			dirty++;
 			if (referenced)
 				goto keep_locked;
 			if (!may_enter_fs)
@@ -470,6 +484,7 @@ static int shrink_list(struct list_head *page_list, struct scan_control *sc)
 					goto keep_locked;
 				mapping = page_mapping(page);
 			case PAGE_CLEAN:
+				dirtyclean++;
 				; /* try to free the page below */
 			}
 		}
@@ -496,8 +511,10 @@ static int shrink_list(struct list_head *page_list, struct scan_control *sc)
 		 * Otherwise, leave the page on the LRU so it is swappable.
 		 */
 		if (PagePrivate(page)) {
-			if (!try_to_release_page(page, sc->gfp_mask))
+			if (!try_to_release_page(page, sc->gfp_mask)) {
+				jump513++;
 				goto activate_locked;
+			}
 			if (!mapping && page_count(page) == 1)
 				goto free_it;
 		}
@@ -514,6 +531,7 @@ static int shrink_list(struct list_head *page_list, struct scan_control *sc)
 		 */
 		if (page_count(page) != 2 || PageDirty(page)) {
 			spin_unlock_irq(&mapping->tree_lock);
+			jump531++;
 			goto keep_locked;
 		}
 
@@ -553,6 +571,12 @@ keep:
 		__pagevec_release_nonlru(&freed_pvec);
 	mod_page_state(pgactivate, pgactivate);
 	sc->nr_reclaimed += reclaimed;
+	if (reclaimed != tried) {
+		printk(KERN_INFO "HW5: shrink_list jumps: jump411=%d jump418=%d jump429=%d jump448=%d jump450=%d jump513=%d dirty=%d dirtyclean=%d jump531=%d\n", 
+		jump411, jump418, jump429, jump448, jump450, jump513, dirty, dirtyclean, jump531);
+	} else {
+		printk(KERN_INFO "HW5: shrink_list jumps: none (reclaimed %d pages)\n", reclaimed);
+	}
 	return reclaimed;
 }
 
