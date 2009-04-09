@@ -907,11 +907,16 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 
 	while (nr_active || nr_inactive) {
 		if (nr_active) {
-			clear_safety_list(zone, sc);
 			sc->nr_to_scan = min(nr_active,
 					(unsigned long)SWAP_CLUSTER_MAX);
+			if ( USE_MRU_POLICY ) {
+				clear_safety_list(zone, sc);
+				// nr_active -= sc->nr_to_scan;
+				scan_active_for_mru(zone, sc);
+			} else {
+				printk(KERN_INFO "HW5: not calling MRU functions\n");
+			}
 			nr_active -= sc->nr_to_scan;
-			scan_active_for_mru(zone, sc);
 			refill_inactive_zone(zone, sc);
 		}
 
