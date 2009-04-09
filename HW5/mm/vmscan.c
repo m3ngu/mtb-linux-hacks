@@ -847,7 +847,8 @@ refill_inactive_zone(struct zone *zone, struct scan_control *sc)
 		cond_resched();
 		page = lru_to_page(&l_hold);
 		list_del(&page->lru);
-		if (page_mapped(page)) {
+		/* modified HW5, added && !USE_MRU_POLICY */
+		if (page_mapped(page) && !USE_MRU_POLICY) {
 			if (!reclaim_mapped ||
 			    (total_swap_pages == 0 && PageAnon(page)) ||
 			    page_referenced(page, 0, sc->priority <= 0)) {
