@@ -829,7 +829,8 @@ refill_inactive_zone(struct zone *zone, struct scan_control *sc)
 void scan_active_for_mru(struct zone *zone, struct scan_control *sc) {
 	int scan_records = sc->nr_to_scan;
 	struct list_head *active_list = &zone->active_list;
-	struct list_head *cur = active_list;
+	struct list_head *cur = active_list, 
+		*next = active_list->next;
 	int locked_pages = 0, 
 		refed_pages = 0, 
 		dirtypages = 0,
@@ -838,8 +839,10 @@ void scan_active_for_mru(struct zone *zone, struct scan_control *sc) {
 		swapcache = 0,
 		anonpages = 0;
 	int i = 0;
+	
 	for (i = 0; i < scan_records; i++) {
-		cur = cur->next;
+		cur = next;
+		next = cur->next;
 		struct page *thispage = list_entry(cur, struct page, lru);
 		if ( PageLocked(thispage) ) 	locked_pages++;
 		if ( PageReferenced(thispage) )	refed_pages++;
