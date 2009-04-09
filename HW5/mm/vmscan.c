@@ -968,7 +968,7 @@ void scan_active_for_mru(struct zone *zone, struct scan_control *sc) {
 
 	// get stuff from inactive
 	if (to_grab_from_inactive > 0)
-	  printk("HW5: try to get %i pages from INACTIVE\n", to_grab_from_inactive);
+	  printk("HW5: try to get %lu pages from INACTIVE\n", to_grab_from_inactive);
 	while(to_grab_from_inactive > 0)
 	  {
 	    struct list_head *firstpage = (&zone->inactive_list)->next;
