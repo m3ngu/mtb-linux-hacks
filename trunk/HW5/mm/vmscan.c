@@ -958,8 +958,21 @@ void scan_active_for_mru(struct zone *zone, struct scan_control *sc) {
 	printk(KERN_INFO "HW5 activity scan of %d records found: %d locked, %d refed, %d dirty, %d private, %d ondisk, %d swapcache, %d anon\n",
 		i, locked_pages, refed_pages, dirtypages, privatepages, diskpages, swapcache, anonpages);
 
+	// hack to bring in stuff from the inactive list
+	unsigned long to_grab_from_inactive = 0;
+	if (list_size_target > zone->nr_active)
+	  to_grab_from_inactive = list_size_target;
+
 	// release lock
 	spin_unlock_irq(&zone->lru_lock);
+
+	// get stuff from inactive
+	while(to_grab_from_inactive > 0)
+	  {
+	    struct list_head firstpage = &zone->inactive_list->next;
+	    if (firstpage != &zone->inactive_list)
+	      activate_page( list_entry(firstpage,struct page, lru)  );
+	  }
 }
 
 
