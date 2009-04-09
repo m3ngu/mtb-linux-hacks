@@ -572,7 +572,8 @@ keep:
 	mod_page_state(pgactivate, pgactivate);
 	sc->nr_reclaimed += reclaimed;
 	if (reclaimed != tried) {
-		printk(KERN_INFO "HW5: shrink_list jumps: jump411=%d jump418=%d jump429=%d jump448=%d jump450=%d jump513=%d dirty=%d dirtyclean=%d jump531=%d\n", 
+		printk(KERN_INFO "HW5: shrink_list jumps: reclaimed=%d jump411=%d jump418=%d jump429=%d jump448=%d jump450=%d jump513=%d dirty=%d dirtyclean=%d jump531=%d\n", 
+		reclaimed,
 		jump411, jump418, jump429, jump448, jump450, jump513, dirty, dirtyclean, jump531);
 	} else {
 		printk(KERN_INFO "HW5: shrink_list jumps: none (reclaimed %d pages)\n", reclaimed);
@@ -590,7 +591,7 @@ static void shrink_cache_mru(struct zone *zone, struct scan_control *sc)
 	
 	/* HW5 */
 	printk(KERN_INFO "HW5: shrink_cache_mru()\n");
-	BUG_ON(safety_list_consistency(zone,sc));
+	safety_list_consistency(zone,sc);
 
 	pagevec_init(&pvec, 1);
 
@@ -952,7 +953,7 @@ void scan_active_for_mru(struct zone *zone, struct scan_control *sc) {
 
 	// take the lock
 	spin_lock_irq(&zone->lru_lock);
-	int list_size_target = sc->nr_to_reclaim + SWAP_CLUSTER_MAX;
+	int list_size_target = 4*(sc->nr_to_scan + SWAP_CLUSTER_MAX);
 	struct list_head *active_list = &zone->active_list;
 	struct list_head *cur = active_list, 
 		*next = active_list->next;
@@ -970,8 +971,12 @@ void scan_active_for_mru(struct zone *zone, struct scan_control *sc) {
 		cur = next;
 		next = cur->next;
 		struct page *thispage = list_entry(cur, struct page, lru);
+		/* alternate plan: next if page_referenced() */
+		if ( 
+			page_referenced(thispage, 0, sc->priority <= 0)
+			) 	refed_pages++;
 		if ( PageLocked(thispage) ) 	locked_pages++;
-		if ( PageReferenced(thispage) )	refed_pages++;
+	//	if ( PageReferenced(thispage) )
 		if ( PageDirty(thispage) )  	dirtypages++;
 		if ( PagePrivate(thispage) )	privatepages++;
 		if ( PageMappedToDisk(thispage) ) diskpages++;
@@ -979,6 +984,7 @@ void scan_active_for_mru(struct zone *zone, struct scan_control *sc) {
 		if ( PageAnon(thispage) )   	anonpages++;
 		del_page_from_active_list(zone, thispage);
 		ClearPageActive(thispage);
+		//ClearPageReferenced(thispage);
 		add_page_to_safety_list(zone, thispage);
 	}
 	printk(KERN_INFO "HW5 activity scan of %d records found: %d locked, %d refed, %d dirty, %d private, %d ondisk, %d swapcache, %d anon\n",
@@ -1023,6 +1029,7 @@ int safety_list_consistency(struct zone *zone, struct scan_control *sc) {
 		printk(KERN_ERR 
 			"HW5: inconsistent safety list! Actual %lu, theoretical %lu\n",
 			i, official_count);
+		zone->nr_safety = i;
 		return 1;
 	}
 	return 0;
