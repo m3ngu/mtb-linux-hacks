@@ -556,6 +556,96 @@ keep:
 	return reclaimed;
 }
 
+static void shrink_cache_mru(struct zone *zone, struct scan_control *sc)
+{
+
+	LIST_HEAD(page_list);
+	struct pagevec pvec;
+	int max_scan = sc->nr_to_scan;
+	
+	/* HW5 */
+	printk(KERN_INFO "HW5: shrink_cache_mru()\n");
+
+	pagevec_init(&pvec, 1);
+
+	lru_add_drain();
+	spin_lock_irq(&zone->lru_lock);
+	while (max_scan > 0) {
+		struct page *page;
+		int nr_taken = 0;
+		int nr_scan = 0;
+		int nr_freed;
+
+		/* HW5 */
+		printk(KERN_INFO "HW5: shrink_cache_mru, 1st while, max_scan=%i\n",max_scan);
+
+		while (nr_scan++ < SWAP_CLUSTER_MAX &&
+				!list_empty(&zone->safety_list)) {
+			page = lru_to_page(&zone->safety_list);
+
+			prefetchw_prev_lru_page(page,
+						&zone->safety_list, flags);
+
+			if (!TestClearPageLRU(page))
+				BUG();
+			list_del(&page->lru);
+			if (get_page_testone(page)) {
+				/*
+				 * It is being freed elsewhere
+				 */
+				__put_page(page);
+				SetPageLRU(page);
+				list_add(&page->lru, &zone->safety_list);
+				continue;
+			}
+			list_add(&page->lru, &page_list);
+			nr_taken++;
+		}
+		zone->nr_safety -= nr_taken;
+		zone->pages_scanned += nr_scan;
+		spin_unlock_irq(&zone->lru_lock);
+
+		if (nr_taken == 0)
+			goto done;
+
+		/* HW5 */
+		printk("HW5: shrink_cache_mru(), nr_scan=%i\n",nr_scan);
+		max_scan -= nr_scan;
+		if (current_is_kswapd())
+			mod_page_state_zone(zone, pgscan_kswapd, nr_scan);
+		else
+			mod_page_state_zone(zone, pgscan_direct, nr_scan);
+		nr_freed = shrink_list(&page_list, sc);
+		if (current_is_kswapd())
+			mod_page_state(kswapd_steal, nr_freed);
+		mod_page_state_zone(zone, pgsteal, nr_freed);
+		sc->nr_to_reclaim -= nr_freed;
+
+		spin_lock_irq(&zone->lru_lock);
+		/*
+		 * Put back any unfreeable pages.
+		 */
+		while (!list_empty(&page_list)) {
+			page = lru_to_page(&page_list);
+			if (TestSetPageLRU(page))
+				BUG();
+			list_del(&page->lru);
+			if (PageActive(page))
+				add_page_to_active_list(zone, page);
+			else
+				add_page_to_inactive_list(zone, page);
+			if (!pagevec_add(&pvec, page)) {
+				spin_unlock_irq(&zone->lru_lock);
+				__pagevec_release(&pvec);
+				spin_lock_irq(&zone->lru_lock);
+			}
+		}
+  	}
+	spin_unlock_irq(&zone->lru_lock);
+done:
+	pagevec_release(&pvec);
+}
+
 /*
  * zone->lru_lock is heavily contented.  We relieve it by quickly privatising
  * a batch of pages and working on them outside the lock.  Any pages which were
@@ -880,10 +970,11 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 {
 	unsigned long nr_active;
 	unsigned long nr_inactive;
-	printk(KERN_INFO "HW5: shrink_zone zone: %d, prio: %u, act: %lu, inact: %lu, scan_act: %lu, scan_inact: %lu\n",
+	printk(KERN_INFO "HW5: shrink_zone zone: %d, prio: %u, act: %lu, inact: %lu, scan_act: %lu, scan_inact: %lu, safety: %lu\n",
 		zone_idx(zone), sc->priority,
 		zone->nr_active, zone->nr_inactive, 
-		zone->nr_scan_active, zone->nr_scan_inactive
+		zone->nr_scan_active, zone->nr_scan_inactive,
+                zone->nr_safety
 	);
 	/*
 	 * Add one to `nr_to_scan' just to make sure that the kernel will
@@ -905,7 +996,7 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 
 	sc->nr_to_reclaim = SWAP_CLUSTER_MAX;
 
-	while (nr_active || nr_inactive) {
+	while (nr_active || nr_inactive || zone->nr_safety) {
 		if (nr_active) {
 			sc->nr_to_scan = min(nr_active,
 					(unsigned long)SWAP_CLUSTER_MAX);
@@ -928,9 +1019,19 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 			if (sc->nr_to_reclaim <= 0)
 				break;
 		}
+
+                if (zone->nr_safety) {
+                        sc->nr_to_scan = min(zone->nr_safety,
+					(unsigned long)SWAP_CLUSTER_MAX);
+                        zone->nr_safety -= sc->nr_to_scan;
+			shrink_cache_mru(zone, sc);
+			if (sc->nr_to_reclaim <= 0)
+				break;
+
+                }
 	}
-	printk(KERN_INFO "HW5: done with zone: reclaimed %lu, act %lu, inact %lu\n", 
-		sc->nr_reclaimed, zone->nr_active, zone->nr_inactive
+	printk(KERN_INFO "HW5: done with zone: reclaimed %lu, act %lu, inact %lu, safety: %lu\n", 
+		sc->nr_reclaimed, zone->nr_active, zone->nr_inactive, zone->nr_safety
 	);
 }
 
