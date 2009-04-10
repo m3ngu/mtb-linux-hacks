@@ -633,7 +633,7 @@ static void shrink_cache_mru(struct zone *zone, struct scan_control *sc)
 			nr_taken++;
 		}
 		zone->nr_safety -= nr_taken;
-                printk("HW5: shrink_cache_mru(), zone->nr_safety=%lu, nr_taken=%i, bens_var=%i\n", zone->nr_safety, nr_taken, bens_var);
+		printk("HW5: shrink_cache_mru(), zone->nr_safety=%lu, nr_taken=%i, bens_var=%i\n", zone->nr_safety, nr_taken, bens_var);
 		zone->pages_scanned += nr_scan;
 		spin_unlock_irq(&zone->lru_lock);
 

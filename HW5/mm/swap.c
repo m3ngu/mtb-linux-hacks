@@ -87,7 +87,10 @@ int rotate_reclaimable_page(struct page *page)
 	spin_lock_irqsave(&zone->lru_lock, flags);
 	if (PageLRU(page) && !PageActive(page)) {
 		list_del(&page->lru);
-		list_add_tail(&page->lru, &zone->inactive_list);
+		if (MRUVictim(page)) 
+			list_add_tail(&page->lru, &zone->safety_list);
+		else 
+			list_add_tail(&page->lru, &zone->inactive_list);
 		inc_page_state(pgrotated);
 	}
 	if (!test_clear_page_writeback(page))
@@ -336,6 +339,8 @@ void __pagevec_lru_add_active(struct pagevec *pvec)
 		if (TestSetPageLRU(page))
 			BUG();
 		if (TestSetPageActive(page))
+			BUG();
+		if (MRUVictim(page))
 			BUG();
 		add_page_to_active_list(zone, page);
 	}
