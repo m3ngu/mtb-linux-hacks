@@ -1106,11 +1106,11 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 	sc->nr_to_reclaim = SWAP_CLUSTER_MAX;
 
 	/* added HW5 */
-	if ( USE_MRU_POLICY ) {
+	if ( USE_MRU_POLICY && nr_safety ) {
 		sc->nr_to_scan = nr_safety;
 		scan_active_for_mru(zone, sc);
 	} else {
-		printk(KERN_INFO "HW5: not calling MRU functions\n");
+		printk(KERN_INFO "HW5: not calling MRU functions (policy or skip)\n");
 	}
 	while (nr_active || nr_inactive || nr_safety) {
 		if (nr_active) {
