@@ -953,7 +953,7 @@ void scan_active_for_mru(struct zone *zone, struct scan_control *sc) {
 
 	// take the lock
 	spin_lock_irq(&zone->lru_lock);
-	int list_size_target = 4*(sc->nr_to_scan + SWAP_CLUSTER_MAX);
+	int list_size_target = sc->nr_to_scan + SWAP_CLUSTER_MAX;
 	struct list_head *active_list = &zone->active_list;
 	struct list_head *cur = active_list, 
 		*next = active_list->next;
@@ -1087,8 +1087,14 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 
         if (USE_MRU_POLICY) {
             zone->nr_scan_inactive = 0; // Disables shrink_cache (i.e. LRU)
+            nr_safety = nr_active;
+            // XXX after this point, we may set nr_active to whatever we want
+            // (including setting it to 0, as we do below)
+
         } else {
             zone->nr_scan_inactive += (zone->nr_inactive >> sc->priority) + 1;
+            nr_safety = 0;
+            // XXX wouldn't it be nice if we cleared the safety list when we changed policies back to NORMAL?
         }
 
 	nr_inactive = zone->nr_scan_inactive;
@@ -1097,27 +1103,25 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 	else
 		nr_inactive = 0;
         
-        nr_safety = zone->nr_safety;
-
 	sc->nr_to_reclaim = SWAP_CLUSTER_MAX;
 
+	/* added HW5 */
+	if ( USE_MRU_POLICY ) {
+		sc->nr_to_scan = nr_safety;
+		scan_active_for_mru(zone, sc);
+	} else {
+		printk(KERN_INFO "HW5: not calling MRU functions\n");
+	}
 	while (nr_active || nr_inactive || nr_safety) {
 		if (nr_active) {
-			sc->nr_to_scan = min(nr_active,
-					(unsigned long)SWAP_CLUSTER_MAX);
-			if ( USE_MRU_POLICY ) {
-				//clear_safety_list(zone, sc);
-				// nr_active -= sc->nr_to_scan;
-				scan_active_for_mru(zone, sc);
+			if (USE_MRU_POLICY && zone->nr_inactive > 2 * zone->nr_active) {
+			  nr_active = 0;
 			} else {
-				printk(KERN_INFO "HW5: not calling MRU functions\n");
-			}
-			/* added HW5 */
-			if (!USE_MRU_POLICY || zone->nr_inactive < 2 * zone->nr_active) {
+			  sc->nr_to_scan = min(nr_active,
+					(unsigned long)SWAP_CLUSTER_MAX);
 			  nr_active -= sc->nr_to_scan;
 			  refill_inactive_zone(zone, sc);
 			}
-			else {nr_active = 0;}
 		}
 
 		if (nr_inactive) {
