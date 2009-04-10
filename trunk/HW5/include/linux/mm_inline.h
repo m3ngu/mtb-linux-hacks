@@ -51,6 +51,7 @@ del_page_from_lru(struct zone *zone, struct page *page)
 	list_del(&page->lru);
 	if (PageActive(page)) {
 		ClearPageActive(page);
+		WARN_ON(MRUVictim(page));
 		zone->nr_active--;
 	}
 	else if (MRUVictim(page)) {
