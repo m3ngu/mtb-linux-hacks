@@ -207,7 +207,7 @@ static int shrink_slab(unsigned long scanned, unsigned int gfp_mask,
 {
 	struct shrinker *shrinker;
 
-	printk(KERN_TRACE "HW5: shrink_slab\n");
+	printk(KERN_DEBUG "HW5: shrink_slab\n");
 	if (scanned == 0)
 		scanned = SWAP_CLUSTER_MAX;
 
@@ -384,7 +384,7 @@ static int shrink_list(struct list_head *page_list, struct scan_control *sc)
 		dirty = 0, dirtyclean = 0, jump531 = 0, tried = 0;
 		
 
-	printk(KERN_TRACE "HW5: shrink_list\n");
+	printk(KERN_DEBUG "HW5: shrink_list\n");
 	cond_resched();
 
 	pagevec_init(&freed_pvec, 1);
@@ -572,11 +572,11 @@ keep:
 	mod_page_state(pgactivate, pgactivate);
 	sc->nr_reclaimed += reclaimed;
 	if (reclaimed != tried) {
-		printk(KERN_TRACE "HW5: shrink_list jumps: reclaimed=%d jump411=%d jump418=%d jump429=%d jump448=%d jump450=%d jump513=%d dirty=%d dirtyclean=%d jump531=%d\n", 
+		printk(KERN_DEBUG "HW5: shrink_list jumps: reclaimed=%d jump411=%d jump418=%d jump429=%d jump448=%d jump450=%d jump513=%d dirty=%d dirtyclean=%d jump531=%d\n", 
 		reclaimed,
 		jump411, jump418, jump429, jump448, jump450, jump513, dirty, dirtyclean, jump531);
 	} else {
-		printk(KERN_TRACE "HW5: shrink_list jumps: none (reclaimed %d pages)\n", reclaimed);
+		printk(KERN_DEBUG "HW5: shrink_list jumps: none (reclaimed %d pages)\n", reclaimed);
 	}
 	return reclaimed;
 }
@@ -590,7 +590,7 @@ static void shrink_cache_mru(struct zone *zone, struct scan_control *sc)
 	int max_scan = sc->nr_to_scan;
 	
 	/* HW5 */
-	printk(KERN_TRACE "HW5: shrink_cache_mru()\n");
+	printk(KERN_DEBUG "HW5: shrink_cache_mru()\n");
 
 	pagevec_init(&pvec, 1);
 
@@ -604,7 +604,7 @@ static void shrink_cache_mru(struct zone *zone, struct scan_control *sc)
                 int bens_var = 0;
 
 		/* HW5 */
-		printk(KERN_TRACE "HW5: shrink_cache_mru, 1st while, max_scan=%i\n",max_scan);
+		printk(KERN_DEBUG "HW5: shrink_cache_mru, 1st while, max_scan=%i\n",max_scan);
 
 		while (nr_scan++ < SWAP_CLUSTER_MAX &&
 				!list_empty(&zone->safety_list)) {
@@ -632,7 +632,7 @@ static void shrink_cache_mru(struct zone *zone, struct scan_control *sc)
 			nr_taken++;
 		}
 		zone->nr_safety -= nr_taken;
-		printk(KERN_TRACE "HW5: shrink_cache_mru(), zone->nr_safety=%lu, nr_taken=%i, bens_var=%i\n", zone->nr_safety, nr_taken, bens_var);
+		printk(KERN_DEBUG "HW5: shrink_cache_mru(), zone->nr_safety=%lu, nr_taken=%i, bens_var=%i\n", zone->nr_safety, nr_taken, bens_var);
 		zone->pages_scanned += nr_scan;
 		spin_unlock_irq(&zone->lru_lock);
 
@@ -640,7 +640,7 @@ static void shrink_cache_mru(struct zone *zone, struct scan_control *sc)
 			goto done;
 
 		/* HW5 */
-		printk(KERN_TRACE "HW5: shrink_cache_mru(), nr_scan=%i\n",nr_scan);
+		printk(KERN_DEBUG "HW5: shrink_cache_mru(), nr_scan=%i\n",nr_scan);
 		max_scan -= nr_scan;
 		if (current_is_kswapd())
 			mod_page_state_zone(zone, pgscan_kswapd, nr_scan);
@@ -695,7 +695,7 @@ static void shrink_cache(struct zone *zone, struct scan_control *sc)
 	int max_scan = sc->nr_to_scan;
 	
 	/* HW5 */
-	printk(KERN_TRACE "HW5: shrink_cache()\n");
+	printk(KERN_DEBUG "HW5: shrink_cache()\n");
 
 	pagevec_init(&pvec, 1);
 
@@ -708,7 +708,7 @@ static void shrink_cache(struct zone *zone, struct scan_control *sc)
 		int nr_freed;
 
 		/* HW5 */
-		printk(KERN_TRACE "HW5: shrink_cache, 1st while, max_scan=%i\n",max_scan);
+		printk(KERN_DEBUG "HW5: shrink_cache, 1st while, max_scan=%i\n",max_scan);
 
 		while (nr_scan++ < SWAP_CLUSTER_MAX &&
 				!list_empty(&zone->inactive_list)) {
@@ -740,7 +740,7 @@ static void shrink_cache(struct zone *zone, struct scan_control *sc)
 			goto done;
 
 		/* HW5 */
-		printk(KERN_TRACE "HW5: shrink_cache(), nr_scan=%i\n",nr_scan);
+		printk(KERN_DEBUG "HW5: shrink_cache(), nr_scan=%i\n",nr_scan);
 		max_scan -= nr_scan;
 		if (current_is_kswapd())
 			mod_page_state_zone(zone, pgscan_kswapd, nr_scan);
@@ -810,7 +810,7 @@ refill_inactive_zone(struct zone *zone, struct scan_control *sc)
 	long mapped_ratio;
 	long distress;
 	long swap_tendency;
-	printk(KERN_TRACE "HW5: refill_inactive_zone, zone %d, prio %u\n",
+	printk(KERN_DEBUG "HW5: refill_inactive_zone, zone %d, prio %u\n",
 		zone_idx(zone), sc->priority
 	);
 
@@ -944,7 +944,7 @@ refill_inactive_zone(struct zone *zone, struct scan_control *sc)
 
 	mod_page_state_zone(zone, pgrefill, pgscanned);
 	mod_page_state(pgdeactivate, pgdeactivate);
-	printk(KERN_TRACE "HW5: refill deactivated %d pages\n", pgdeactivate);
+	printk(KERN_DEBUG "HW5: refill deactivated %d pages\n", pgdeactivate);
 }
 
 
@@ -986,7 +986,7 @@ void scan_active_for_mru(struct zone *zone, struct scan_control *sc) {
 		//ClearPageReferenced(thispage);
 		add_page_to_safety_list(zone, thispage);
 	}
-	printk(KERN_TRACE "HW5 activity scan of %d records found: %d locked, %d refed, %d dirty, %d private, %d ondisk, %d swapcache, %d anon\n",
+	printk(KERN_DEBUG "HW5 activity scan of %d records found: %d locked, %d refed, %d dirty, %d private, %d ondisk, %d swapcache, %d anon\n",
 		i, locked_pages, refed_pages, dirtypages, privatepages, diskpages, swapcache, anonpages);
 	// hack to bring in stuff from the inactive list
 	unsigned long to_grab_from_inactive = 0;
@@ -998,7 +998,7 @@ void scan_active_for_mru(struct zone *zone, struct scan_control *sc) {
 
 	// get stuff from inactive
 	if (to_grab_from_inactive > 0)
-	  printk(KERN_TRACE "HW5: try to get %lu pages from INACTIVE\n", to_grab_from_inactive);
+	  printk(KERN_DEBUG "HW5: try to get %lu pages from INACTIVE\n", to_grab_from_inactive);
 	while(to_grab_from_inactive > 0)
 	  {
 	    struct list_head *firstpage = (&zone->inactive_list)->next;
@@ -1041,7 +1041,7 @@ void clear_safety_list(struct zone *zone, struct scan_control *sc) {
 	// take the lock
 	spin_lock_irq(&zone->lru_lock);
 
-	printk(KERN_TRACE "HW5: clearing %lu pages from safety list\n", 
+	printk(KERN_DEBUG "HW5: clearing %lu pages from safety list\n", 
 		zone->nr_safety);
 	struct page *thispage, *tmp;
 	
@@ -1049,7 +1049,7 @@ void clear_safety_list(struct zone *zone, struct scan_control *sc) {
 		activate_page(thispage);
 		i++;
 	}
-	printk(KERN_TRACE "HW5: removed %d pages from safety list\n", i);
+	printk(KERN_DEBUG "HW5: removed %d pages from safety list\n", i);
 	
 	// release lock
 	spin_unlock_irq(&zone->lru_lock);
@@ -1066,7 +1066,7 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 	unsigned long nr_safety;
 	
 	int current_zone = zone_idx(zone);
-	printk(KERN_TRACE "HW5: shrink_zone zone: %d, reclaimed: %lu, to_reclaim: %d, prio: %u, act: %lu, inact: %lu, scan_act: %lu, scan_inact: %lu, safety: %lu\n",
+	printk(KERN_DEBUG "HW5: shrink_zone zone: %d, reclaimed: %lu, to_reclaim: %d, prio: %u, act: %lu, inact: %lu, scan_act: %lu, scan_inact: %lu, safety: %lu\n",
 		current_zone, 
 		sc->nr_reclaimed, sc->nr_to_reclaim, sc->priority,
 		zone->nr_active, zone->nr_inactive, 
@@ -1109,7 +1109,7 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 		sc->nr_to_scan = nr_safety;
 		scan_active_for_mru(zone, sc);
 	} else {
-		printk(KERN_TRACE "HW5: not calling MRU functions (policy or skip)\n");
+		printk(KERN_DEBUG "HW5: not calling MRU functions (policy or skip)\n");
 	}
 	while (nr_active || nr_inactive || nr_safety) {
 		if (nr_active) {
@@ -1133,7 +1133,7 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 		}
 
 		if (nr_safety) {
-			printk(KERN_TRACE "HW5: nr_safety: %lu\n", nr_safety);
+			printk(KERN_DEBUG "HW5: nr_safety: %lu\n", nr_safety);
 			sc->nr_to_scan = min(nr_safety,
 					(unsigned long)SWAP_CLUSTER_MAX);
 			nr_safety -= sc->nr_to_scan;
@@ -1142,7 +1142,7 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 				break;
 		}
 	}
-	printk(KERN_TRACE "HW5: done with zone %d: reclaimed %lu, to_recl %d, act %lu, inact %lu, safety: %lu\n", 
+	printk(KERN_DEBUG "HW5: done with zone %d: reclaimed %lu, to_recl %d, act %lu, inact %lu, safety: %lu\n", 
 		current_zone, sc->nr_reclaimed, sc->nr_to_reclaim,
 		zone->nr_active, zone->nr_inactive, zone->nr_safety
 	);
@@ -1169,7 +1169,7 @@ shrink_caches(struct zone **zones, struct scan_control *sc)
 {
 	int i;
 
-	printk(KERN_TRACE "HW5: shrink_caches\n");
+	printk(KERN_DEBUG "HW5: shrink_caches\n");
 
 	for (i = 0; zones[i] != NULL; i++) {
 		struct zone *zone = zones[i];
@@ -1183,7 +1183,7 @@ shrink_caches(struct zone **zones, struct scan_control *sc)
 
 		if (zone->all_unreclaimable && sc->priority != DEF_PRIORITY)
 			continue;	/* Let kswapd poll it */
-		printk(KERN_TRACE "HW5: calling shrink_zone; zone %d (or is it %d?); priority %d\n",
+		printk(KERN_DEBUG "HW5: calling shrink_zone; zone %d (or is it %d?); priority %d\n",
 			i, zone_idx(zone), sc->priority
 		);
 		
@@ -1215,7 +1215,7 @@ int try_to_free_pages(struct zone **zones,
 	unsigned long lru_pages = 0;
 	int i;
 
-	printk(KERN_TRACE "HW5: try_to_free_pages\n");
+	printk(KERN_DEBUG "HW5: try_to_free_pages\n");
 
 	sc.gfp_mask = gfp_mask;
 	sc.may_writepage = 0;
