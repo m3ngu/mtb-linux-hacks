@@ -1,11 +1,16 @@
 README for HW5, group 2 (Ben Warfield, Thierry Bertin-Mahieux, Mengu Sukan)
 
 Files in this package:
-	README 	- This file.
-	homework_work.txt	- In which we assert that this code is correct
-	mru.patch	-	actual kernel patch file
-	testing/Makefile	- Makefile for demonstration/test code	
-
+	README 				- This file.
+	homework_work.txt		- In which we assert that this code is correct
+	mru.patch			- actual kernel patch file
+	testing/Makefile		- Makefile for demonstration/test code	
+	testing/set_cache_normal.c	- set cache to LRU
+	testing/set_cache_mru.c		- set cache to MRU
+	testing/swap_central.c		- creates linked list, goes through
+	testing/demo.sh			- demo LRU vs MRU
+	testing/vmdemo.sh		- demo LRU vs MRU, pageins/pageouts report
+	
 
 To compile all test and demonstration code, run "make" in the testing
 directory. The compiler will look for linux header files in 
