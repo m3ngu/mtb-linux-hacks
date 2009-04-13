@@ -1,0 +1,26 @@
+README for HW5, group 2 (Ben Warfield, Thierry Bertin-Mahieux, Mengu Sukan)
+
+Files in this package:
+	README 	- This file.
+	homework_work.txt	- In which we assert that this code is correct
+	mru.patch	-	actual kernel patch file
+	testing/Makefile	- Makefile for demonstration/test code	
+
+
+To run all test and demonstration code, run "make test" in the testing 
+directory.  The compiler will look for linux header files in 
+/usr/src/linux-2.6.11.12$(TREE_TAG).  By default, $TREE_TAG is set to "-hwk4", 
+but it can be changed on the command line, e.g.
+
+	make test TREE_TAG='-group2'
+	make test TREE_TAG=''
+
+To run only the system call tests, run the program testing/test-syscalls.
+To run only the scheduling tests, run the program testing/test_with_signals.pl
+(but first run testing/setup.sh if the 'make test' has not previously been run).  
+Running the two test suites separately will probably be more informative.
+
+At the end of test_with_signals.pl, the test script should launch 'top'.  If it
+fails to launch (possible, since we have loaded the system heavily with
+high-priority tasks), we recommend interrupting the test script and launching 
+top manually as "top -d5".
