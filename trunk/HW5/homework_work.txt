@@ -48,26 +48,37 @@ Modified files:
         added __NR_set_cachepolicy macro and updated __NR_syscalls
     include/linux/syscalls.h
         added declarations for sys_set_cachepolicy
-	include/linux/mmzone.h
-		
-	include/linux/page-flags.h
-		Added a new flag (MRUVictim) and associated macros.
-	include/linux/mm_inline.h
-		Added add_to_safety_list, del_from_safety_list, and modified del_from_lru
-	mm/page_alloc.c
-	mm/swap.c
-	mm/vmscan.c
+    include/linux/mmzone.h
+        Added two new fields to memory zone object: safety_list and
+        nr_safety (analogous to active_list and nr_active).
+    include/linux/page-flags.h
+        Added a new flag (MRUVictim) and associated macros.
+    include/linux/mm_inline.h
+        Added add_to_safety_list, del_from_safety_list, and modified
+        del_from_lru
+    mm/page_alloc.c
+        Changed initialization of memory zone objects to handle two new fields added in mmzone.h.
+    mm/swap.c
+        Modified activate_page and rotate_reclaimable page to take handle pages being in safety_list as well as inactive_list.
+    mm/vmscan.c
+        Added system call implementation for set_cachepolicy.  Added
+        utility functions to move pages to and from safety_list, and a
+        modified form of shrink_cache (shrink_cache_mru) to reclaim
+        pages from safety_list.  Modified shrink_zone to call
+        MRU-related functions instead of (or occasionally in addition
+        to) standard LRU-related functions.  Modified
+        refill_inactive_zone to behave differently when MRU is active.
 
 
 New Files:
-	include/linux/hw5_definitions.h	- CACHE_MRU and CACHE_NORMAL macros
-	testing/Makefile	- Makefile for demonstration/test code	
-	testing/set_cache_mru.c	- Utility to set the cache policy to MRU
-	testing/set_cache_normal.c	- Utility to set the cache policy to LRU
-	testing/swap_central.c	- Test script to allocate and traverse a very large linked list.
-	testing/demo.sh	- Demo script for timing LRU vs. MRU execution of the demo program.
-	testing/vmdemo.sh	- Demo script to time and monitor pageins/pageouts for LRU vs. MRU execution of the demo program.
-		
+    include/linux/hw5_definitions.h - CACHE_MRU and CACHE_NORMAL macros
+    testing/Makefile    - Makefile for demonstration/test code  
+    testing/set_cache_mru.c - Utility to set the cache policy to MRU
+    testing/set_cache_normal.c  - Utility to set the cache policy to LRU
+    testing/swap_central.c  - Test script to allocate and traverse a very large linked list.
+    testing/demo.sh - Demo script for timing LRU vs. MRU execution of the demo program.
+    testing/vmdemo.sh   - Demo script to time and monitor pageins/pageouts for LRU vs. MRU execution of the demo program.
+        
 
 Specific changes:
 
