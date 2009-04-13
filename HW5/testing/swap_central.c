@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
 	int super_total_number = total_list_members * iterations;
 	for (int i = 0; i < super_total_number ; i++) {
 		cur = cur->next;
-		int unused = strlen(cur->space_waster);
+		//int unused = strlen(cur->space_waster);
 		if ( ! ( i % 50000) ) {
 			printf("In step %d out of %d\n", i , super_total_number);
 		}
