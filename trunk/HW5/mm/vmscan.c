@@ -591,7 +591,6 @@ static void shrink_cache_mru(struct zone *zone, struct scan_control *sc)
 	
 	/* HW5 */
 	printk(KERN_INFO "HW5: shrink_cache_mru()\n");
-	safety_list_consistency(zone,sc);
 
 	pagevec_init(&pvec, 1);
 
@@ -633,7 +632,7 @@ static void shrink_cache_mru(struct zone *zone, struct scan_control *sc)
 			nr_taken++;
 		}
 		zone->nr_safety -= nr_taken;
-		printk("HW5: shrink_cache_mru(), zone->nr_safety=%lu, nr_taken=%i, bens_var=%i\n", zone->nr_safety, nr_taken, bens_var);
+		printk(KERN_INFO "HW5: shrink_cache_mru(), zone->nr_safety=%lu, nr_taken=%i, bens_var=%i\n", zone->nr_safety, nr_taken, bens_var);
 		zone->pages_scanned += nr_scan;
 		spin_unlock_irq(&zone->lru_lock);
 
@@ -641,7 +640,7 @@ static void shrink_cache_mru(struct zone *zone, struct scan_control *sc)
 			goto done;
 
 		/* HW5 */
-		printk("HW5: shrink_cache_mru(), nr_scan=%i\n",nr_scan);
+		printk(KERN_INFO "HW5: shrink_cache_mru(), nr_scan=%i\n",nr_scan);
 		max_scan -= nr_scan;
 		if (current_is_kswapd())
 			mod_page_state_zone(zone, pgscan_kswapd, nr_scan);
@@ -741,7 +740,7 @@ static void shrink_cache(struct zone *zone, struct scan_control *sc)
 			goto done;
 
 		/* HW5 */
-		printk("HW5: shrink_cache(), nr_scan=%i\n",nr_scan);
+		printk(KERN_INFO "HW5: shrink_cache(), nr_scan=%i\n",nr_scan);
 		max_scan -= nr_scan;
 		if (current_is_kswapd())
 			mod_page_state_zone(zone, pgscan_kswapd, nr_scan);
@@ -996,10 +995,10 @@ void scan_active_for_mru(struct zone *zone, struct scan_control *sc) {
 
 	// release lock
 	spin_unlock_irq(&zone->lru_lock);
-	safety_list_consistency(zone, sc);
+
 	// get stuff from inactive
 	if (to_grab_from_inactive > 0)
-	  printk("HW5: try to get %lu pages from INACTIVE\n", to_grab_from_inactive);
+	  printk(KERN_INFO "HW5: try to get %lu pages from INACTIVE\n", to_grab_from_inactive);
 	while(to_grab_from_inactive > 0)
 	  {
 	    struct list_head *firstpage = (&zone->inactive_list)->next;
@@ -1141,12 +1140,6 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 			shrink_cache_mru(zone, sc);
 			if (sc->nr_to_reclaim <= 0)
 				break;
-			if (nr_safety > 10000000) {
-				printk(KERN_INFO "HW5: OMG!!!! nr_safety shouldn't be < 0\n");
-				USE_MRU_POLICY = 0;
-				break;
-			}
-
 		}
 	}
 	printk(KERN_INFO "HW5: done with zone %d: reclaimed %lu, to_recl %d, act %lu, inact %lu, safety: %lu\n", 
