@@ -1,0 +1,750 @@
+diff -Naur linux-2.6.11.12/arch/i386/kernel/entry.S linux-2.6.11.12-hwk5/arch/i386/kernel/entry.S
+--- linux-2.6.11.12/arch/i386/kernel/entry.S	2009-04-13 16:13:20.000000000 -0400
++++ linux-2.6.11.12-hwk5/arch/i386/kernel/entry.S	2009-04-08 22:48:20.000000000 -0400
+@@ -890,5 +890,9 @@
+ 	.long sys_add_key
+ 	.long sys_request_key
+ 	.long sys_keyctl
++	/* our system call here at 289 */
++	.long sys_set_cachepolicy
++	/* *************************** */
+ 
++			
+ syscall_table_size=(.-sys_call_table)
+diff -Naur linux-2.6.11.12/include/asm-i386/unistd.h linux-2.6.11.12-hwk5/include/asm-i386/unistd.h
+--- linux-2.6.11.12/include/asm-i386/unistd.h	2005-06-11 22:45:37.000000000 -0400
++++ linux-2.6.11.12-hwk5/include/asm-i386/unistd.h	2009-04-08 22:48:20.000000000 -0400
+@@ -294,8 +294,10 @@
+ #define __NR_add_key		286
+ #define __NR_request_key	287
+ #define __NR_keyctl		288
++/* added for HW5 */
++#define __NR_set_cachepolicy    289
+ 
+-#define NR_syscalls 289
++#define NR_syscalls 290
+ 
+ /*
+  * user-visible error numbers are in the range -1 - -128: see
+diff -Naur linux-2.6.11.12/include/linux/hw5_definitions.h linux-2.6.11.12-hwk5/include/linux/hw5_definitions.h
+--- linux-2.6.11.12/include/linux/hw5_definitions.h	1969-12-31 19:00:00.000000000 -0500
++++ linux-2.6.11.12-hwk5/include/linux/hw5_definitions.h	2009-04-08 22:48:21.000000000 -0400
+@@ -0,0 +1,18 @@
++/**
++ * T. Bertin-Mahieux, M. Sukan, B. Warfield
++ * TEAM 2 - OS Spring 2009
++ * Simple file added for HW5, containt two int definitions
++ * WOW!!!!!!!!!!!!!
++ */
++
++
++
++#ifndef _LINUX_HW5_DEFINITIONS_H
++#define _LINUX_HW5_DEFINITIONS_H
++
++
++#define CACHE_NORMAL 392029
++#define CACHE_MRU 6638229
++
++
++#endif // _LINUX_HW5_DEFINITIONS_H
+diff -Naur linux-2.6.11.12/include/linux/mm_inline.h linux-2.6.11.12-hwk5/include/linux/mm_inline.h
+--- linux-2.6.11.12/include/linux/mm_inline.h	2005-06-11 22:45:37.000000000 -0400
++++ linux-2.6.11.12-hwk5/include/linux/mm_inline.h	2009-04-09 20:00:51.000000000 -0400
+@@ -1,4 +1,22 @@
+ 
++/* added HW5 */
++static inline void
++add_page_to_safety_list(struct zone *zone, struct page *page)
++{
++	list_add(&page->lru, &zone->safety_list);
++	zone->nr_safety++;
++	SetMRUVictim(page);
++}
++
++static inline void
++del_page_from_safety_list(struct zone *zone, struct page *page)
++{
++	list_del(&page->lru);
++	zone->nr_safety--;
++	ClearMRUVictim(page);
++}
++/* end added HW5 */
++
+ static inline void
+ add_page_to_active_list(struct zone *zone, struct page *page)
+ {
+@@ -33,8 +51,14 @@
+ 	list_del(&page->lru);
+ 	if (PageActive(page)) {
+ 		ClearPageActive(page);
++		WARN_ON(MRUVictim(page));
+ 		zone->nr_active--;
+-	} else {
++	}
++	else if (MRUVictim(page)) {
++	  ClearMRUVictim(page);
++	  zone->nr_safety--;
++	}
++	else {
+ 		zone->nr_inactive--;
+ 	}
+ }
+diff -Naur linux-2.6.11.12/include/linux/mmzone.h linux-2.6.11.12-hwk5/include/linux/mmzone.h
+--- linux-2.6.11.12/include/linux/mmzone.h	2005-06-11 22:45:37.000000000 -0400
++++ linux-2.6.11.12-hwk5/include/linux/mmzone.h	2009-04-08 22:48:21.000000000 -0400
+@@ -20,6 +20,8 @@
+ #define MAX_ORDER CONFIG_FORCE_MAX_ZONEORDER
+ #endif
+ 
++
++
+ struct free_area {
+ 	struct list_head	free_list;
+ 	unsigned long		nr_free;
+@@ -136,6 +138,11 @@
+ 	spinlock_t		lru_lock;	
+ 	struct list_head	active_list;
+ 	struct list_head	inactive_list;
++	
++	/* added HW5 */
++	struct list_head        safety_list;
++	unsigned long           nr_safety;
++
+ 	unsigned long		nr_scan_active;
+ 	unsigned long		nr_scan_inactive;
+ 	unsigned long		nr_active;
+diff -Naur linux-2.6.11.12/include/linux/page-flags.h linux-2.6.11.12-hwk5/include/linux/page-flags.h
+--- linux-2.6.11.12/include/linux/page-flags.h	2005-06-11 22:45:37.000000000 -0400
++++ linux-2.6.11.12-hwk5/include/linux/page-flags.h	2009-04-08 22:48:21.000000000 -0400
+@@ -76,6 +76,10 @@
+ #define PG_reclaim		18	/* To be reclaimed asap */
+ #define PG_nosave_free		19	/* Free, should not be written */
+ 
++/* added for HW5 */
++#define PG_mruvictim            20      /* you're on the safety list, youhou! */
++
++
+ 
+ /*
+  * Global page accounting.  One instance per CPU.  Only unsigned longs are
+@@ -161,6 +165,13 @@
+ 		__mod_page_state(offset, (delta));				\
+ 	} while (0)
+ 
++
++/* added for HW5 - manipulation fo our mruvictim flag */
++#define MRUVictim(page) test_bit(PG_mruvictim, &(page)->flags)
++#define SetMRUVictim(page) set_bit(PG_mruvictim, &(page)->flags)
++#define ClearMRUVictim(page) clear_bit(PG_mruvictim, &(page)->flags)
++
++
+ /*
+  * Manipulation of page state flags
+  */
+diff -Naur linux-2.6.11.12/include/linux/syscalls.h linux-2.6.11.12-hwk5/include/linux/syscalls.h
+--- linux-2.6.11.12/include/linux/syscalls.h	2005-06-11 22:45:37.000000000 -0400
++++ linux-2.6.11.12-hwk5/include/linux/syscalls.h	2009-04-08 22:48:21.000000000 -0400
+@@ -506,4 +506,8 @@
+ asmlinkage long sys_keyctl(int cmd, unsigned long arg2, unsigned long arg3,
+ 			   unsigned long arg4, unsigned long arg5);
+ 
++/* added for HW5 */
++asmlinkage long sys_set_cachepolicy(int policy);
++
++
+ #endif
+diff -Naur linux-2.6.11.12/mm/page_alloc.c linux-2.6.11.12-hwk5/mm/page_alloc.c
+--- linux-2.6.11.12/mm/page_alloc.c	2005-06-11 22:45:37.000000000 -0400
++++ linux-2.6.11.12-hwk5/mm/page_alloc.c	2009-04-08 22:48:21.000000000 -0400
+@@ -1642,6 +1642,8 @@
+ 				zone_names[j], realsize, batch);
+ 		INIT_LIST_HEAD(&zone->active_list);
+ 		INIT_LIST_HEAD(&zone->inactive_list);
++		/* added for HW5 */
++		INIT_LIST_HEAD(&zone->safety_list);
+ 		zone->nr_scan_active = 0;
+ 		zone->nr_scan_inactive = 0;
+ 		zone->nr_active = 0;
+diff -Naur linux-2.6.11.12/mm/swap.c linux-2.6.11.12-hwk5/mm/swap.c
+--- linux-2.6.11.12/mm/swap.c	2005-06-11 22:45:37.000000000 -0400
++++ linux-2.6.11.12-hwk5/mm/swap.c	2009-04-10 15:45:44.000000000 -0400
+@@ -87,7 +87,10 @@
+ 	spin_lock_irqsave(&zone->lru_lock, flags);
+ 	if (PageLRU(page) && !PageActive(page)) {
+ 		list_del(&page->lru);
+-		list_add_tail(&page->lru, &zone->inactive_list);
++		if (MRUVictim(page)) 
++			list_add_tail(&page->lru, &zone->safety_list);
++		else 
++			list_add_tail(&page->lru, &zone->inactive_list);
+ 		inc_page_state(pgrotated);
+ 	}
+ 	if (!test_clear_page_writeback(page))
+@@ -105,7 +108,12 @@
+ 
+ 	spin_lock_irq(&zone->lru_lock);
+ 	if (PageLRU(page) && !PageActive(page)) {
++	  /* added HW5 */
++	  if (MRUVictim(page))
++	    del_page_from_safety_list(zone, page);
++	  else
+ 		del_page_from_inactive_list(zone, page);
++
+ 		SetPageActive(page);
+ 		add_page_to_active_list(zone, page);
+ 		inc_page_state(pgactivate);
+@@ -332,6 +340,8 @@
+ 			BUG();
+ 		if (TestSetPageActive(page))
+ 			BUG();
++		if (MRUVictim(page))
++			BUG();
+ 		add_page_to_active_list(zone, page);
+ 	}
+ 	if (zone)
+diff -Naur linux-2.6.11.12/mm/vmscan.c linux-2.6.11.12-hwk5/mm/vmscan.c
+--- linux-2.6.11.12/mm/vmscan.c	2005-06-11 22:45:37.000000000 -0400
++++ linux-2.6.11.12-hwk5/mm/vmscan.c	2009-04-13 14:31:32.000000000 -0400
+@@ -33,11 +33,39 @@
+ #include <linux/notifier.h>
+ #include <linux/rwsem.h>
+ 
++/* added for HW5 */
++#include <linux/hw5_definitions.h>
++
+ #include <asm/tlbflush.h>
+ #include <asm/div64.h>
+ 
+ #include <linux/swapops.h>
+ 
++
++/* added for HW5 - use MRU, if false use normal LRU */
++static int USE_MRU_POLICY = 0;
++
++/**
++ * change the memory management policy
++ */
++asmlinkage int sys_set_cachepolicy(int policy)
++{
++  printk(KERN_INFO "calling set_cachepolicy, policy=%i\n", policy);
++  if (policy == CACHE_NORMAL)
++    {
++      USE_MRU_POLICY = 0;
++      return 0;
++    }
++  if (policy == CACHE_MRU)
++    {
++      USE_MRU_POLICY = 1;
++      return 0;
++    }
++  return -EINVAL;
++}
++
++
++
+ /* possible outcome of pageout() */
+ typedef enum {
+ 	/* failed to write page out, page is locked */
+@@ -179,6 +207,7 @@
+ {
+ 	struct shrinker *shrinker;
+ 
++	printk(KERN_DEBUG "HW5: shrink_slab\n");
+ 	if (scanned == 0)
+ 		scanned = SWAP_CLUSTER_MAX;
+ 
+@@ -350,11 +379,17 @@
+ 	struct pagevec freed_pvec;
+ 	int pgactivate = 0;
+ 	int reclaimed = 0;
++	
++	int jump411 = 0, jump418 = 0, jump429 = 0, jump448 = 0, jump450 = 0, jump513 = 0,
++		dirty = 0, dirtyclean = 0, jump531 = 0, tried = 0;
++		
+ 
++	printk(KERN_DEBUG "HW5: shrink_list\n");
+ 	cond_resched();
+ 
+ 	pagevec_init(&freed_pvec, 1);
+ 	while (!list_empty(page_list)) {
++		tried++;
+ 		struct address_space *mapping;
+ 		struct page *page;
+ 		int may_enter_fs;
+@@ -375,13 +410,17 @@
+ 		if (page_mapped(page) || PageSwapCache(page))
+ 			sc->nr_scanned++;
+ 
+-		if (PageWriteback(page))
++		if (PageWriteback(page)) {
++			jump411++;
+ 			goto keep_locked;
++		}
+ 
+ 		referenced = page_referenced(page, 1, sc->priority <= 0);
+ 		/* In active use or really unfreeable?  Activate it. */
+-		if (referenced && page_mapping_inuse(page))
++		if (referenced && page_mapping_inuse(page)) {
++			jump418++;	
+ 			goto activate_locked;
++		}
+ 
+ #ifdef CONFIG_SWAP
+ 		/*
+@@ -389,8 +428,10 @@
+ 		 * Try to allocate it some swap space here.
+ 		 */
+ 		if (PageAnon(page) && !PageSwapCache(page)) {
+-			if (!add_to_swap(page))
++			if (!add_to_swap(page)) {
++				jump429++;
+ 				goto activate_locked;
++			}
+ 		}
+ #endif /* CONFIG_SWAP */
+ 
+@@ -405,8 +446,10 @@
+ 		if (page_mapped(page) && mapping) {
+ 			switch (try_to_unmap(page)) {
+ 			case SWAP_FAIL:
++				jump448++;
+ 				goto activate_locked;
+ 			case SWAP_AGAIN:
++				jump450++;
+ 				goto keep_locked;
+ 			case SWAP_SUCCESS:
+ 				; /* try to free the page below */
+@@ -414,6 +457,7 @@
+ 		}
+ 
+ 		if (PageDirty(page)) {
++			dirty++;
+ 			if (referenced)
+ 				goto keep_locked;
+ 			if (!may_enter_fs)
+@@ -440,6 +484,7 @@
+ 					goto keep_locked;
+ 				mapping = page_mapping(page);
+ 			case PAGE_CLEAN:
++				dirtyclean++;
+ 				; /* try to free the page below */
+ 			}
+ 		}
+@@ -466,8 +511,10 @@
+ 		 * Otherwise, leave the page on the LRU so it is swappable.
+ 		 */
+ 		if (PagePrivate(page)) {
+-			if (!try_to_release_page(page, sc->gfp_mask))
++			if (!try_to_release_page(page, sc->gfp_mask)) {
++				jump513++;
+ 				goto activate_locked;
++			}
+ 			if (!mapping && page_count(page) == 1)
+ 				goto free_it;
+ 		}
+@@ -484,6 +531,7 @@
+ 		 */
+ 		if (page_count(page) != 2 || PageDirty(page)) {
+ 			spin_unlock_irq(&mapping->tree_lock);
++			jump531++;
+ 			goto keep_locked;
+ 		}
+ 
+@@ -523,9 +571,112 @@
+ 		__pagevec_release_nonlru(&freed_pvec);
+ 	mod_page_state(pgactivate, pgactivate);
+ 	sc->nr_reclaimed += reclaimed;
++	if (reclaimed != tried) {
++		printk(KERN_DEBUG "HW5: shrink_list jumps: reclaimed=%d jump411=%d jump418=%d jump429=%d jump448=%d jump450=%d jump513=%d dirty=%d dirtyclean=%d jump531=%d\n", 
++		reclaimed,
++		jump411, jump418, jump429, jump448, jump450, jump513, dirty, dirtyclean, jump531);
++	} else {
++		printk(KERN_DEBUG "HW5: shrink_list jumps: none (reclaimed %d pages)\n", reclaimed);
++	}
+ 	return reclaimed;
+ }
+ 
++int safety_list_consistency(struct zone *, struct scan_control *);
++static void shrink_cache_mru(struct zone *zone, struct scan_control *sc)
++{
++
++	LIST_HEAD(page_list);
++	struct pagevec pvec;
++	int max_scan = sc->nr_to_scan;
++	
++	/* HW5 */
++	printk(KERN_DEBUG "HW5: shrink_cache_mru()\n");
++
++	pagevec_init(&pvec, 1);
++
++	lru_add_drain();
++	spin_lock_irq(&zone->lru_lock);
++	while (max_scan > 0) {
++		struct page *page;
++		int nr_taken = 0;
++		int nr_scan = 0;
++		int nr_freed;
++                int bens_var = 0;
++
++		/* HW5 */
++		printk(KERN_DEBUG "HW5: shrink_cache_mru, 1st while, max_scan=%i\n",max_scan);
++
++		while (nr_scan++ < SWAP_CLUSTER_MAX &&
++				!list_empty(&zone->safety_list)) {
++			page = lru_to_page(&zone->safety_list);
++
++			prefetchw_prev_lru_page(page,
++						&zone->safety_list, flags);
++
++			if (!TestClearPageLRU(page))
++				BUG();
++			list_del(&page->lru);
++                        ClearMRUVictim(page);
++			if (get_page_testone(page)) {
++				/*
++				 * It is being freed elsewhere
++				 */
++				__put_page(page);
++				SetPageLRU(page);
++				list_add(&page->lru, &zone->safety_list);
++                                SetMRUVictim(page);
++                                bens_var++;
++				continue;
++			}
++			list_add(&page->lru, &page_list);
++			nr_taken++;
++		}
++		zone->nr_safety -= nr_taken;
++		printk(KERN_DEBUG "HW5: shrink_cache_mru(), zone->nr_safety=%lu, nr_taken=%i, bens_var=%i\n", zone->nr_safety, nr_taken, bens_var);
++		zone->pages_scanned += nr_scan;
++		spin_unlock_irq(&zone->lru_lock);
++
++		if (nr_taken == 0)
++			goto done;
++
++		/* HW5 */
++		printk(KERN_DEBUG "HW5: shrink_cache_mru(), nr_scan=%i\n",nr_scan);
++		max_scan -= nr_scan;
++		if (current_is_kswapd())
++			mod_page_state_zone(zone, pgscan_kswapd, nr_scan);
++		else
++			mod_page_state_zone(zone, pgscan_direct, nr_scan);
++		nr_freed = shrink_list(&page_list, sc);
++		if (current_is_kswapd())
++			mod_page_state(kswapd_steal, nr_freed);
++		mod_page_state_zone(zone, pgsteal, nr_freed);
++		sc->nr_to_reclaim -= nr_freed;
++
++		spin_lock_irq(&zone->lru_lock);
++		/*
++		 * Put back any unfreeable pages.
++		 */
++		while (!list_empty(&page_list)) {
++			page = lru_to_page(&page_list);
++			if (TestSetPageLRU(page))
++				BUG();
++			list_del(&page->lru);
++			if (PageActive(page))
++				add_page_to_active_list(zone, page);
++			else
++				add_page_to_inactive_list(zone, page);
++			if (!pagevec_add(&pvec, page)) {
++				spin_unlock_irq(&zone->lru_lock);
++				__pagevec_release(&pvec);
++				spin_lock_irq(&zone->lru_lock);
++			}
++		}
++  	}
++	spin_unlock_irq(&zone->lru_lock);
++done:
++	pagevec_release(&pvec);
++}
++
+ /*
+  * zone->lru_lock is heavily contented.  We relieve it by quickly privatising
+  * a batch of pages and working on them outside the lock.  Any pages which were
+@@ -538,9 +689,13 @@
+  */
+ static void shrink_cache(struct zone *zone, struct scan_control *sc)
+ {
++
+ 	LIST_HEAD(page_list);
+ 	struct pagevec pvec;
+ 	int max_scan = sc->nr_to_scan;
++	
++	/* HW5 */
++	printk(KERN_DEBUG "HW5: shrink_cache()\n");
+ 
+ 	pagevec_init(&pvec, 1);
+ 
+@@ -552,6 +707,9 @@
+ 		int nr_scan = 0;
+ 		int nr_freed;
+ 
++		/* HW5 */
++		printk(KERN_DEBUG "HW5: shrink_cache, 1st while, max_scan=%i\n",max_scan);
++
+ 		while (nr_scan++ < SWAP_CLUSTER_MAX &&
+ 				!list_empty(&zone->inactive_list)) {
+ 			page = lru_to_page(&zone->inactive_list);
+@@ -581,6 +739,8 @@
+ 		if (nr_taken == 0)
+ 			goto done;
+ 
++		/* HW5 */
++		printk(KERN_DEBUG "HW5: shrink_cache(), nr_scan=%i\n",nr_scan);
+ 		max_scan -= nr_scan;
+ 		if (current_is_kswapd())
+ 			mod_page_state_zone(zone, pgscan_kswapd, nr_scan);
+@@ -650,6 +810,9 @@
+ 	long mapped_ratio;
+ 	long distress;
+ 	long swap_tendency;
++	printk(KERN_DEBUG "HW5: refill_inactive_zone, zone %d, prio %u\n",
++		zone_idx(zone), sc->priority
++	);
+ 
+ 	lru_add_drain();
+ 	pgmoved = 0;
+@@ -715,7 +878,8 @@
+ 		cond_resched();
+ 		page = lru_to_page(&l_hold);
+ 		list_del(&page->lru);
+-		if (page_mapped(page)) {
++		/* modified HW5, added && !USE_MRU_POLICY */
++		if (page_mapped(page) && !USE_MRU_POLICY) {
+ 			if (!reclaim_mapped ||
+ 			    (total_swap_pages == 0 && PageAnon(page)) ||
+ 			    page_referenced(page, 0, sc->priority <= 0)) {
+@@ -780,6 +944,109 @@
+ 
+ 	mod_page_state_zone(zone, pgrefill, pgscanned);
+ 	mod_page_state(pgdeactivate, pgdeactivate);
++	printk(KERN_DEBUG "HW5: refill deactivated %d pages\n", pgdeactivate);
++}
++
++
++void scan_active_for_mru(struct zone *zone, struct scan_control *sc) {
++
++	// take the lock
++	spin_lock_irq(&zone->lru_lock);
++	int list_size_target = sc->nr_to_scan + SWAP_CLUSTER_MAX;
++	struct list_head *active_list = &zone->active_list;
++	struct list_head *cur = active_list, 
++		*next = active_list->next;
++	int locked_pages = 0, 
++		refed_pages = 0, 
++		dirtypages = 0,
++		privatepages = 0,
++		diskpages = 0,
++		swapcache = 0,
++		anonpages = 0;
++	int i = 0;
++	
++	while (zone->nr_safety < list_size_target && zone->nr_active > 0) {
++		i++;
++		cur = next;
++		next = cur->next;
++		struct page *thispage = list_entry(cur, struct page, lru);
++		/* alternate plan: next if page_referenced() */
++		if ( 
++			page_referenced(thispage, 0, sc->priority <= 0)
++			) 	refed_pages++;
++		if ( PageLocked(thispage) ) 	locked_pages++;
++	//	if ( PageReferenced(thispage) )
++		if ( PageDirty(thispage) )  	dirtypages++;
++		if ( PagePrivate(thispage) )	privatepages++;
++		if ( PageMappedToDisk(thispage) ) diskpages++;
++		if ( PageSwapCache(thispage) ) 	swapcache++;
++		if ( PageAnon(thispage) )   	anonpages++;
++		del_page_from_active_list(zone, thispage);
++		ClearPageActive(thispage);
++		//ClearPageReferenced(thispage);
++		add_page_to_safety_list(zone, thispage);
++	}
++	printk(KERN_DEBUG "HW5 activity scan of %d records found: %d locked, %d refed, %d dirty, %d private, %d ondisk, %d swapcache, %d anon\n",
++		i, locked_pages, refed_pages, dirtypages, privatepages, diskpages, swapcache, anonpages);
++	// hack to bring in stuff from the inactive list
++	unsigned long to_grab_from_inactive = 0;
++	if (list_size_target > zone->nr_active)
++	  to_grab_from_inactive = list_size_target;
++
++	// release lock
++	spin_unlock_irq(&zone->lru_lock);
++
++	// get stuff from inactive
++	if (to_grab_from_inactive > 0)
++	  printk(KERN_DEBUG "HW5: try to get %lu pages from INACTIVE\n", to_grab_from_inactive);
++	while(to_grab_from_inactive > 0)
++	  {
++	    struct list_head *firstpage = (&zone->inactive_list)->next;
++	    if (firstpage != &zone->inactive_list)
++	      activate_page( list_entry(firstpage,struct page, lru)  );
++	    to_grab_from_inactive--;
++	  }
++}
++
++
++/**
++ * Checks if zone->nr_safety is equal to the exact number of pages in the list
++ */
++int safety_list_consistency(struct zone *zone, struct scan_control *sc) {
++	unsigned long i = 0;
++	unsigned long official_count = 0;
++	struct page *thispage, *tmp;
++	// take the lock
++	spin_lock_irq(&zone->lru_lock);
++	official_count = zone->nr_safety;
++	list_for_each_entry_safe(thispage, tmp, &zone->safety_list, lru) {
++		i++;
++	}
++	// release lock
++	spin_unlock_irq(&zone->lru_lock);
++	if (i != official_count) {
++		printk(KERN_ERR 
++			"HW5: inconsistent safety list! Actual %lu, theoretical %lu\n",
++			i, official_count);
++		zone->nr_safety = i;
++		return 1;
++	}
++	return 0;
++}
++
++
++void clear_safety_list(struct zone *zone, struct scan_control *sc) {
++	int i = 0;
++
++	printk(KERN_DEBUG "HW5: clearing %lu pages from safety list\n", 
++		zone->nr_safety);
++	struct page *thispage, *tmp;
++	
++	list_for_each_entry_safe(thispage, tmp, &zone->safety_list, lru) {
++		activate_page(thispage);
++		i++;
++	}
++	printk(KERN_DEBUG "HW5: removed %d pages from safety list\n", i);
+ }
+ 
+ /*
+@@ -790,7 +1057,16 @@
+ {
+ 	unsigned long nr_active;
+ 	unsigned long nr_inactive;
+-
++	unsigned long nr_safety;
++	
++	int current_zone = zone_idx(zone);
++	printk(KERN_DEBUG "HW5: shrink_zone zone: %d, reclaimed: %lu, to_reclaim: %d, prio: %u, act: %lu, inact: %lu, scan_act: %lu, scan_inact: %lu, safety: %lu\n",
++		current_zone, 
++		sc->nr_reclaimed, sc->nr_to_reclaim, sc->priority,
++		zone->nr_active, zone->nr_inactive, 
++		zone->nr_scan_active, zone->nr_scan_inactive,
++		zone->nr_safety
++	);
+ 	/*
+ 	 * Add one to `nr_to_scan' just to make sure that the kernel will
+ 	 * slowly sift through the active list.
+@@ -802,21 +1078,44 @@
+ 	else
+ 		nr_active = 0;
+ 
+-	zone->nr_scan_inactive += (zone->nr_inactive >> sc->priority) + 1;
++        if (USE_MRU_POLICY) {
++            zone->nr_scan_inactive = 0; // Disables shrink_cache (i.e. LRU)
++            nr_safety = nr_active;
++            // XXX after this point, we may set nr_active to whatever we want
++            // (including setting it to 0, as we do below)
++        } else {
++            zone->nr_scan_inactive += (zone->nr_inactive >> sc->priority) + 1;
++            nr_safety = 0;
++	    // if we left anything in the safety list, return it to the active list  
++            if ( zone->nr_safety ) clear_safety_list(zone,sc);
++        }
++
+ 	nr_inactive = zone->nr_scan_inactive;
+ 	if (nr_inactive >= SWAP_CLUSTER_MAX)
+ 		zone->nr_scan_inactive = 0;
+ 	else
+ 		nr_inactive = 0;
+-
++        
+ 	sc->nr_to_reclaim = SWAP_CLUSTER_MAX;
+ 
+-	while (nr_active || nr_inactive) {
++	/* added HW5 */
++	if ( USE_MRU_POLICY && nr_safety ) {
++		sc->nr_to_scan = nr_safety;
++		scan_active_for_mru(zone, sc);
++	} else {
++		printk(KERN_DEBUG "HW5: not calling MRU functions (policy or skip)\n");
++	}
++
++	while (nr_active || nr_inactive || nr_safety) {
+ 		if (nr_active) {
+-			sc->nr_to_scan = min(nr_active,
++			if (USE_MRU_POLICY && zone->nr_inactive > 2 * zone->nr_active) {
++			  nr_active = 0;
++			} else {
++			  sc->nr_to_scan = min(nr_active,
+ 					(unsigned long)SWAP_CLUSTER_MAX);
+-			nr_active -= sc->nr_to_scan;
+-			refill_inactive_zone(zone, sc);
++			  nr_active -= sc->nr_to_scan;
++			  refill_inactive_zone(zone, sc);
++			}
+ 		}
+ 
+ 		if (nr_inactive) {
+@@ -827,7 +1126,21 @@
+ 			if (sc->nr_to_reclaim <= 0)
+ 				break;
+ 		}
++
++		if (nr_safety) {
++			printk(KERN_DEBUG "HW5: nr_safety: %lu\n", nr_safety);
++			sc->nr_to_scan = min(nr_safety,
++					(unsigned long)SWAP_CLUSTER_MAX);
++			nr_safety -= sc->nr_to_scan;
++			shrink_cache_mru(zone, sc);
++			if (sc->nr_to_reclaim <= 0)
++				break;
++		}
+ 	}
++	printk(KERN_DEBUG "HW5: done with zone %d: reclaimed %lu, to_recl %d, act %lu, inact %lu, safety: %lu\n", 
++		current_zone, sc->nr_reclaimed, sc->nr_to_reclaim,
++		zone->nr_active, zone->nr_inactive, zone->nr_safety
++	);
+ }
+ 
+ /*
+@@ -851,6 +1164,8 @@
+ {
+ 	int i;
+ 
++	printk(KERN_DEBUG "HW5: shrink_caches\n");
++
+ 	for (i = 0; zones[i] != NULL; i++) {
+ 		struct zone *zone = zones[i];
+ 
+@@ -863,7 +1178,10 @@
+ 
+ 		if (zone->all_unreclaimable && sc->priority != DEF_PRIORITY)
+ 			continue;	/* Let kswapd poll it */
+-
++		printk(KERN_DEBUG "HW5: calling shrink_zone; zone %d (or is it %d?); priority %d\n",
++			i, zone_idx(zone), sc->priority
++		);
++		
+ 		shrink_zone(zone, sc);
+ 	}
+ }
+@@ -892,6 +1210,8 @@
+ 	unsigned long lru_pages = 0;
+ 	int i;
+ 
++	printk(KERN_DEBUG "HW5: try_to_free_pages\n");
++
+ 	sc.gfp_mask = gfp_mask;
+ 	sc.may_writepage = 0;
+ 
