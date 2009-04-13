@@ -15,17 +15,17 @@ but it can be changed on the command line, e.g.
 	make test TREE_TAG='-group2'
 	make test TREE_TAG=''
 
-To swith between policies, use the two following programs. Of course, by default,
-we use the normal (LRU) policy.
+To switch between policies, use the two following programs. Of course, by 
+default, we use the normal (LRU) policy.
 	
 	set_cache_normal
 	set_cache_mru
 
-The program to run during tests is "swap_central", it creates a linked list (size
-can be passed as a parameter) and runs through it a number of times (second
-parameter). For instance:
+The program to run during tests is "swap-central", it creates a linked
+list (size can be passed as a parameter) and runs through it a number of
+times (second parameter). For instance:
 
-	swap_central 150000 3
+	swap-central 150000 3
 
 
 The two demo programs are:
@@ -33,9 +33,10 @@ The two demo programs are:
 	demo.sh
 	vmdemo.sh
 
-The first one ("demo.sh") launches swap_central with LRU policy, than MRU policy.
-Execution time is reported.
-The second one ("vmdemo.sh") does the same, but reports stats about pageins and
-pageouts.
+The first one ("demo.sh") launches swap-central with LRU policy, then
+MRU policy, and reports the execution time for each.  The second one
+("vmdemo.sh") does the same, but also reports statistics about pageins
+and pageouts (at 5-second intervals throughout the execution of each run
+of the program).
 
 
