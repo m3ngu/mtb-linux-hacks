@@ -48,10 +48,25 @@ Modified files:
         added __NR_set_cachepolicy macro and updated __NR_syscalls
     include/linux/syscalls.h
         added declarations for sys_set_cachepolicy
+	include/linux/mmzone.h
+		
+	include/linux/page-flags.h
+		Added a new flag (MRUVictim) and associated macros.
+	include/linux/mm_inline.h
+		Added add_to_safety_list, del_from_safety_list, and modified del_from_lru
+	mm/page_alloc.c
+	mm/swap.c
+	mm/vmscan.c
+
 
 New Files:
 	include/linux/hw5_definitions.h	- CACHE_MRU and CACHE_NORMAL macros
 	testing/Makefile	- Makefile for demonstration/test code	
+	testing/set_cache_mru.c	- Utility to set the cache policy to MRU
+	testing/set_cache_normal.c	- Utility to set the cache policy to LRU
+	testing/swap_central.c	- Test script to allocate and traverse a very large linked list.
+	testing/demo.sh	- Demo script for timing LRU vs. MRU execution of the demo program.
+	testing/vmdemo.sh	- Demo script to time and monitor pageins/pageouts for LRU vs. MRU execution of the demo program.
 		
 
 Specific changes:
