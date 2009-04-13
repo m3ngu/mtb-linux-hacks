@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 /*
 	Uselessly large circular doubly-linked list structure.  We will 
@@ -34,6 +35,8 @@ int main(int argc, char *argv[]) {
 	head.next = &head;
 	strcpy(head.space_waster, "this uses a trivial amount of space");
 	printf("Producing loop of %d list members to traverse\n", total_list_members);
+	clock_t start, now;
+	start = clock();
 	
 	for (int i = 0; i < total_list_members; i++) {
 		struct circular_illogic *new = malloc(sizeof(struct circular_illogic));
@@ -53,6 +56,10 @@ int main(int argc, char *argv[]) {
 		head.prev->next = new;
 		head.prev = new;
 	}
+	now = clock();
+	printf("Allocation took %.3f seconds\n", 
+		(float) (now - start)/CLOCKS_PER_SEC
+	);
 	
 	struct circular_illogic *cur = &head;
 	int super_total_number = total_list_members * iterations;
@@ -60,7 +67,11 @@ int main(int argc, char *argv[]) {
 		cur = cur->next;
 		//int unused = strlen(cur->space_waster);
 		if ( ! ( i % 50000) ) {
-			printf("In step %d out of %d\n", i , super_total_number);
+			now = clock();
+			printf("In step %d out of %d: %.3f seconds used\n", 
+				i , super_total_number, 
+				(float) (now - start)/CLOCKS_PER_SEC
+			);
 		}
 		if ( &head == cur ) {
 			printf("In step %d: passing Go! (Can I have $200?)\n", i);
