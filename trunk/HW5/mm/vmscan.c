@@ -1038,9 +1038,6 @@ int safety_list_consistency(struct zone *zone, struct scan_control *sc) {
 void clear_safety_list(struct zone *zone, struct scan_control *sc) {
 	int i = 0;
 
-	// take the lock
-	spin_lock_irq(&zone->lru_lock);
-
 	printk(KERN_DEBUG "HW5: clearing %lu pages from safety list\n", 
 		zone->nr_safety);
 	struct page *thispage, *tmp;
@@ -1050,9 +1047,6 @@ void clear_safety_list(struct zone *zone, struct scan_control *sc) {
 		i++;
 	}
 	printk(KERN_DEBUG "HW5: removed %d pages from safety list\n", i);
-	
-	// release lock
-	spin_unlock_irq(&zone->lru_lock);
 }
 
 /*
@@ -1087,13 +1081,13 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
         if (USE_MRU_POLICY) {
             zone->nr_scan_inactive = 0; // Disables shrink_cache (i.e. LRU)
             nr_safety = nr_active;
-            // XXX after this point, we may set nr_active to whatever we want
+            // NOTE: after this point, we may set nr_active to whatever we want
             // (including setting it to 0, as we do below)
-
         } else {
             zone->nr_scan_inactive += (zone->nr_inactive >> sc->priority) + 1;
             nr_safety = 0;
-            // XXX wouldn't it be nice if we cleared the safety list when we changed policies back to NORMAL?
+		// if we left anything in the safety list, return it to the active list  
+		if ( zone->nr_safety ) clear_safety_list(zone,sc);
         }
 
 	nr_inactive = zone->nr_scan_inactive;
@@ -1111,6 +1105,7 @@ shrink_zone(struct zone *zone, struct scan_control *sc)
 	} else {
 		printk(KERN_DEBUG "HW5: not calling MRU functions (policy or skip)\n");
 	}
+
 	while (nr_active || nr_inactive || nr_safety) {
 		if (nr_active) {
 			if (USE_MRU_POLICY && zone->nr_inactive > 2 * zone->nr_active) {
