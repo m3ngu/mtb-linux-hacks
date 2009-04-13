@@ -55,11 +55,12 @@ int main(int argc, char *argv[]) {
 	}
 	
 	struct circular_illogic *cur = &head;
-	for (int i = 0; i < total_list_members * iterations ; i++) {
+	int super_total_number = total_list_members * iterations;
+	for (int i = 0; i < super_total_number ; i++) {
 		cur = cur->next;
 		int unused = strlen(cur->space_waster);
-		if ( ! ( i % 10000) ) {
-			printf("In step %d: string length is %d\n", i , unused);
+		if ( ! ( i % 50000) ) {
+			printf("In step %d out of %d\n", i , super_total_number);
 		}
 		if ( &head == cur ) {
 			printf("In step %d: passing Go! (Can I have $200?)\n", i);
