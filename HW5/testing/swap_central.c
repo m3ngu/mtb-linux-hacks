@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
 		//int unused = strlen(cur->space_waster);
 		if ( ! ( i % 50000) ) {
 			now = clock();
-			printf("In step %d out of %d: %.3f seconds used\n", 
+			printf("In step %6d out of %6d: %.3f seconds used\n", 
 				i , super_total_number, 
 				(float) (now - start)/CLOCKS_PER_SEC
 			);
