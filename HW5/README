@@ -32,6 +32,9 @@ times (second parameter). For instance:
 
 	swap-central 150000 3
 
+Each item in the linked list has a size of 2056 bytes--we find that a
+list of 125000 items or more will reliably cause swapping during its
+execution.
 
 The two demo programs are:
 
