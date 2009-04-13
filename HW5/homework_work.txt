@@ -82,3 +82,19 @@ New Files:
 
 Specific changes:
 
+The system-call-related work (entry.S, header modifications and
+implementation, and utility programs) was done by Thierry, as were the
+modifications to 'struct zone' and the initialization code.  The
+modifications to mm_inline.h and page-flags.h were done by Thierry.  In
+swap.c, the modifications to activate_page were done by Thierry, and
+rotate_reclaimable_page by Ben.
+
+In vmscan.c, Mengu wrote the modified shrink_cache_mru function, Ben
+wrote the clear_safety_list and scan_active_for_mru functions (later
+modified by Thierry), and Thierry wrote the (now unused)
+safety_list_consistency function.  Other changes were made more or less
+by committee.
+
+The swap-central test program was written by Ben, with modifications by
+Thierry and Mengu, and the test scripts were typed by Ben based on
+full-group discussion.
