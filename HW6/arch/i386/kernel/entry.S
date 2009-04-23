@@ -862,5 +862,8 @@ ENTRY(sys_call_table)
 	.long sys_add_key
 	.long sys_request_key
 	.long sys_keyctl
+	.long sys_addtag
+	.long sys_rmtag
+	.long sys_gettags
 
 syscall_table_size=(.-sys_call_table)

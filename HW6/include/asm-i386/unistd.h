@@ -294,8 +294,12 @@
 #define __NR_add_key		286
 #define __NR_request_key	287
 #define __NR_keyctl		288
+/* added for HW6 */
+#define __NR_addtag		289
+#define __NR_remtag		290
+#define __NR_gettags		291
 
-#define NR_syscalls 289
+#define NR_syscalls 292
 
 /*
  * user-visible error numbers are in the range -1 - -128: see
