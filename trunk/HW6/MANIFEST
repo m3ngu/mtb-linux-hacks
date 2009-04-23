@@ -1,3 +1,6 @@
 arch/i386/kernel/entry.S
 include/asm-i386/unistd.h
 include/linux/syscalls.h
+include/linux/fs.h
+fs/ext2/namei.c
+fs/namei.c
