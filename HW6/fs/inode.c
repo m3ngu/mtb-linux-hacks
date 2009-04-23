@@ -6,6 +6,11 @@
 
 #include <linux/config.h>
 #include <linux/fs.h>
+/* added HW6 */
+#include <linux/namei.h>
+#include <asm/namei.h>
+#include <asm/uaccess.h>
+/* */
 #include <linux/mm.h>
 #include <linux/dcache.h>
 #include <linux/init.h>
@@ -1379,7 +1384,54 @@ EXPORT_SYMBOL(init_special_inode);
 
 /* added HW6 */
 
-asmlinkage int sys_addtag(char *path, char *word, size_t len) {return 0;}
+/**
+ * Add a tag to given file.
+ * @param path Pathname
+ * @param word Tag
+ * @param len Tag length
+ * a lot of copy paste from fs/namei.c sys_mkdir 
+ */
+asmlinkage int sys_addtag(char *path, char *word, size_t len) 
+{
+  int error = 0;
+  char * tmp;
+
+  // dummy check
+  if (len == 0)
+    return -EINVAL;
+
+  tmp = getname(path);
+  error = PTR_ERR(tmp);
+  if (!IS_ERR(tmp)) {
+    struct dentry *dentry;
+    struct nameidata nd;
+
+    error = path_lookup(tmp,LOOKUP_PARENT, &nd);
+    if (error)
+      goto out;
+    // now we should have nd.dentry the right *dentry
+    if (IS_ERR(nd.dentry)) {
+      error = PTR_ERR(nd.dentry); // error pointer in dentry
+      goto out;
+    }
+    dentry = nd.dentry;
+  }
+  else { goto out; }
+  
+  // we have the proper dentry, let's copy user stuff
+  char * mem_word;
+  mem_word = kmalloc(len,GFP_KERNEL);
+  if (NULL == mem_word) {error = -ENOMEM; goto out;}
+  strncpy_from_user(mem_word,word,len);
+  // call vfs function
+
+  // free kernel memory
+  kfree(mem_word);
+  
+
+ out:
+  return error;
+}
 
 asmlinkage int sys_rmtag(char *path, char *word, size_t len) {return 0;}
 
