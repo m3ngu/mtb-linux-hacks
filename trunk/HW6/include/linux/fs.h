@@ -971,6 +971,10 @@ struct inode_operations {
 	ssize_t (*getxattr) (struct dentry *, const char *, void *, size_t);
 	ssize_t (*listxattr) (struct dentry *, char *, size_t);
 	int (*removexattr) (struct dentry *, const char *);
+	/* HW6 additions: */
+	int (*add_tag) (struct dentry *, const char *, size_t);
+	int (*rm_tag) (struct dentry *, const char *, size_t);
+	size_t (*get_tags) (struct dentry *, char *, size_t);
 };
 
 struct seq_file;
