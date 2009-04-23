@@ -1311,5 +1311,24 @@ int ext2_rmtag (struct dentry *d, const char *tag, size_t taglen) {
 	return 0;
 }
 size_t ext2_gettags (struct dentry *d, char *buf, size_t buflen) {
-	return 0;
+	size_t total_bytes = 0;
+	/*
+		get the inode for d
+		get the i_reserved1 field
+			if 0, return 0 (no tags, length 0, everybody wins)
+		read block into a buffer head
+		for i from 1 to 16
+			if there's another tag
+				if its length is not going to cause overflow
+					copy it to the buffer (including null-termination)
+				else 
+					set some flag to indicate that we're not copying?
+				increment size_t retval by the length of this tag plus 1 (for the null)
+			else 
+				break
+		return retval
+
+			
+	*/
+	return total_bytes;
 }
