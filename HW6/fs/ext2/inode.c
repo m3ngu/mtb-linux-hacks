@@ -1268,3 +1268,48 @@ int ext2_setattr(struct dentry *dentry, struct iattr *iattr)
 		error = ext2_acl_chmod(inode);
 	return error;
 }
+
+/* HW6 additions */
+int ext2_addtag (struct dentry *d, const char *tag, size_t taglen) {
+	/*
+		get the inode for d
+		get the i_reserved1 field
+		if 0
+			allocate new block
+			set i_reserved
+		get buffer head for tag block
+		find number of tags in block
+			if 16, return -EINVAL?
+		check if current tag is in block
+			if so, return -ESOMETHING?
+			// corner
+		check if there is space in the block for a new tag
+		add tag to block
+		mark buffer head dirty
+			
+	*/
+	return 0;
+}
+int ext2_rmtag (struct dentry *d, const char *tag, size_t taglen) {
+	/* 
+		get the inode for d  
+		get the i_reserved1 field
+			if 0, return NOPE
+		read the block into a buffer
+		find out if the tag is in the buffer
+			if not, return NOPE
+		rearrange bytes in the buffer
+		IF there's still at least one tag
+			mark buffer head dirty
+			return 0
+		ELSE
+			clear i_reserved
+			free the block
+			return 0
+		
+	*/
+	return 0;
+}
+size_t ext2_gettags (struct dentry *d, char *buf, size_t buflen) {
+	return 0;
+}
