@@ -1391,7 +1391,7 @@ EXPORT_SYMBOL(init_special_inode);
  * @param len Tag length
  * a lot of copy paste from fs/namei.c sys_mkdir 
  */
-asmlinkage int sys_addtag(char *path, char *word, size_t len) 
+asmlinkage int sys_addtag(char __user *path, char *word, size_t len) 
 {
   int error = 0;
   char * tmp;
@@ -1433,9 +1433,9 @@ asmlinkage int sys_addtag(char *path, char *word, size_t len)
   return error;
 }
 
-asmlinkage int sys_rmtag(char *path, char *word, size_t len) {return 0;}
+asmlinkage int sys_rmtag(char __user *path, char *word, size_t len) {return 0;}
 
-asmlinkage size_t sys_gettags(char *path, char *buffer, size_t size) {return 0;}
+asmlinkage size_t sys_gettags(char __user *path, char *buffer, size_t size) {return 0;}
 
 
 
