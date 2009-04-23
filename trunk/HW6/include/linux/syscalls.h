@@ -506,4 +506,9 @@ asmlinkage long sys_request_key(const char __user *_type,
 asmlinkage long sys_keyctl(int cmd, unsigned long arg2, unsigned long arg3,
 			   unsigned long arg4, unsigned long arg5);
 
+/* added HW6 */
+asmlinkage long sys_addtag(char *path,char *word, size_t len);
+asmlinkage long sys_rmtag(char *path,char *word, size_t len);
+asmlinkage long sys_gettags(char *path,char *buffer, size_t sizecd);
+
 #endif
