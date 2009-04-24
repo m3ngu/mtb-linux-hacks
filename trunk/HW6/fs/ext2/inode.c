@@ -1277,35 +1277,52 @@ int ext2_setattr(struct dentry *dentry, struct iattr *iattr)
 }
 
 /* HW6 additions */
+#define EXT2_MAX_TAGS 16
+
 int ext2_addtag (struct dentry *d, const char *tag, size_t taglen) {
+	struct inode *i = d->d_inode;
+	struct buffer_head *bh = NULL;
+	/* maybe ? type questionable */
+	sector_t block_id = EXT2_I(i)->i_file_tags;
+	if (!block_id) {
+		/* get new block */
+		EXT2_I(i)->i_file_tags = block_id;
+	}
+	bh = sb_bread(i->i_sb, block_id);
+	
 	/*
-		get the inode for d
-		get the i_reserved1 field
-		if 0
-			allocate new block
-			set i_reserved
 		get buffer head for tag block
 		find number of tags in block
 			if 16, return -EINVAL?
 		check if current tag is in block
 			if so, return -ESOMETHING?
-			// corner
+			// corner case with previous
 		check if there is space in the block for a new tag
 		add tag to block
+		make inode as updated (ctime)
 		mark buffer head dirty
 			
 	*/
+
 	return 0;
 }
 int ext2_rmtag (struct dentry *d, const char *tag, size_t taglen) {
+	struct inode *i = d->d_inode;
+	struct buffer_head *bh = NULL;
+	/* maybe ? type questionable */
+	sector_t block_id = EXT2_I(i)->i_file_tags;
+	if (!block_id) {
+		return 0; /* XXX should be something more informative */
+		/* like -EINVAL
+			or -EYOUSUCK
+		*/
+	}
+	bh = sb_bread(i->i_sb, block_id);
 	/* 
-		get the inode for d  
-		get the i_reserved1 field
-			if 0, return NOPE
-		read the block into a buffer
 		find out if the tag is in the buffer
 			if not, return NOPE
 		rearrange bytes in the buffer
+		mark inode as updated (ctime)
 		IF there's still at least one tag
 			mark buffer head dirty
 			return 0
@@ -1319,11 +1336,31 @@ int ext2_rmtag (struct dentry *d, const char *tag, size_t taglen) {
 }
 size_t ext2_gettags (struct dentry *d, char *buf, size_t buflen) {
 	size_t total_bytes = 0;
+	int i;
+	struct inode *node = d->d_inode;
+	struct buffer_head *bh = NULL;
+	/* maybe ? type questionable */
+	sector_t block_id = EXT2_I(node)->i_file_tags;
+	if (!block_id) {
+		return 0; 
+	}
+	bh = sb_bread(node->i_sb, block_id);
+	char *curr = bh->b_data;
+	for ( i = 0; i < EXT2_MAX_TAGS; i++ ) {
+		unsigned short taglen;
+		/* read first two bytes for taglength */
+		/* XXX maybe? */
+		taglen = le16_to_cpu(*curr);
+		curr += 2;
+		total_bytes += taglen;
+		if (total_bytes < buflen) {
+			strncpy(buf, curr, taglen);
+			*(buf + taglen) = '\0';
+			buf += taglen + 1;
+			++total_bytes;
+		}
+	}
 	/*
-		get the inode for d
-		get the i_reserved1 field
-			if 0, return 0 (no tags, length 0, everybody wins)
-		read block into a buffer head
 		for i from 1 to 16
 			if there's another tag
 				if its length is not going to cause overflow
