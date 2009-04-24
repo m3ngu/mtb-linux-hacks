@@ -296,7 +296,7 @@
 #define __NR_keyctl		288
 /* added for HW6 */
 #define __NR_addtag		289
-#define __NR_remtag		290
+#define __NR_rmtag		290
 #define __NR_gettags		291
 
 #define NR_syscalls 292
