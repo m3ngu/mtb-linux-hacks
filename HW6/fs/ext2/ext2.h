@@ -41,6 +41,9 @@ struct ext2_inode_info {
 	__u32	i_prealloc_block;
 	__u32	i_prealloc_count;
 	__u32	i_dir_start_lookup;
+
+	__u32	i_file_tags;
+
 #ifdef CONFIG_EXT2_FS_XATTR
 	/*
 	 * Extended attributes can be read independently of the main file

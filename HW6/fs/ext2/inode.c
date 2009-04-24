@@ -1069,6 +1069,10 @@ void ext2_read_inode (struct inode * inode)
 	ei->i_frag_size = raw_inode->i_fsize;
 	ei->i_file_acl = le32_to_cpu(raw_inode->i_file_acl);
 	ei->i_dir_acl = 0;
+	/* added for HW6 */
+	ei->i_file_tags = le32_to_cpu(raw_inode->i_reserved1);
+	/* */
+
 	if (S_ISREG(inode->i_mode))
 		inode->i_size |= ((__u64)le32_to_cpu(raw_inode->i_size_high)) << 32;
 	else
@@ -1185,6 +1189,9 @@ static int ext2_update_inode(struct inode * inode, int do_sync)
 	raw_inode->i_frag = ei->i_frag_no;
 	raw_inode->i_fsize = ei->i_frag_size;
 	raw_inode->i_file_acl = cpu_to_le32(ei->i_file_acl);
+	/* added for HW6 */
+	raw_inode->i_reserved1 = cpu_to_le32(ei->i_file_tags);
+	/* */
 	if (!S_ISREG(inode->i_mode))
 		raw_inode->i_dir_acl = cpu_to_le32(ei->i_dir_acl);
 	else {
