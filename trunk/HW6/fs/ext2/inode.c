@@ -31,6 +31,7 @@
 #include <linux/writeback.h>
 #include <linux/buffer_head.h>
 #include <linux/mpage.h>
+
 #include "ext2.h"
 #include "acl.h"
 
@@ -1281,12 +1282,18 @@ int ext2_setattr(struct dentry *dentry, struct iattr *iattr)
 
 int ext2_addtag (struct dentry *d, const char *tag, size_t taglen) {
 	struct inode *i = d->d_inode;
+	struct ext2_inode_info *ei = EXT2_I(i);
 	struct buffer_head *bh = NULL;
+
+	down_write(&ei->xattr_sem);
+
 	/* maybe ? type questionable */
-	sector_t block_id = EXT2_I(i)->i_file_tags;
+	sector_t block_id = ei->i_file_tags;
 	if (!block_id) {
 		/* get new block */
-		EXT2_I(i)->i_file_tags = block_id;
+		printk(KERN_ERR "In addtag: can't actually allocate the block yet\n");
+		goto out;
+		ei->i_file_tags = block_id;
 	}
 	bh = sb_bread(i->i_sb, block_id);
 	
@@ -1303,20 +1310,28 @@ int ext2_addtag (struct dentry *d, const char *tag, size_t taglen) {
 		mark buffer head dirty
 			
 	*/
-
+out:
+	up_write(&ei->xattr_sem);
 	return 0;
 }
 int ext2_rmtag (struct dentry *d, const char *tag, size_t taglen) {
 	struct inode *i = d->d_inode;
+	struct ext2_inode_info *ei = EXT2_I(i);
 	struct buffer_head *bh = NULL;
+	int error = 0;
+	down_write(&ei->xattr_sem);
+	
 	/* maybe ? type questionable */
-	sector_t block_id = EXT2_I(i)->i_file_tags;
+	sector_t block_id = ei->i_file_tags;
 	if (!block_id) {
-		return 0; /* XXX should be something more informative */
+		/* XXX should set error to something more informative */
 		/* like -EINVAL
 			or -EYOUSUCK
 		*/
+		printk(KERN_DEBUG "In rmtag on %s: no tags\n", d->d_name.name);
+		goto out;
 	}
+	printk(KERN_DEBUG "In rmtag on %s: reading buffer\n", d->d_name.name);
 	bh = sb_bread(i->i_sb, block_id);
 	/* 
 		find out if the tag is in the buffer
@@ -1332,17 +1347,24 @@ int ext2_rmtag (struct dentry *d, const char *tag, size_t taglen) {
 			return 0
 		
 	*/
-	return 0;
+out:
+	up_write(&ei->xattr_sem);	
+	return error;
 }
 size_t ext2_gettags (struct dentry *d, char *buf, size_t buflen) {
 	size_t total_bytes = 0;
 	int i;
 	struct inode *node = d->d_inode;
+	struct ext2_inode_info *ei = EXT2_I(node);
 	struct buffer_head *bh = NULL;
+
+	down_read(&ei->xattr_sem);
+	
 	/* maybe ? type questionable */
-	sector_t block_id = EXT2_I(node)->i_file_tags;
+	sector_t block_id = ei->i_file_tags;
 	if (!block_id) {
-		return 0; 
+		printk(KERN_DEBUG "In gettags on %s: no tags\n", d->d_name.name);
+		goto out;
 	}
 	bh = sb_bread(node->i_sb, block_id);
 	char *curr = bh->b_data;
@@ -1352,12 +1374,11 @@ size_t ext2_gettags (struct dentry *d, char *buf, size_t buflen) {
 		/* XXX maybe? */
 		taglen = le16_to_cpu(*curr);
 		curr += 2;
-		total_bytes += taglen;
+		total_bytes += taglen + 1;
 		if (total_bytes < buflen) {
 			strncpy(buf, curr, taglen);
 			*(buf + taglen) = '\0';
 			buf += taglen + 1;
-			++total_bytes;
 		}
 	}
 	/*
@@ -1374,5 +1395,7 @@ size_t ext2_gettags (struct dentry *d, char *buf, size_t buflen) {
 
 			
 	*/
+out:
+	up_read(&ei->xattr_sem);
 	return total_bytes;
 }
