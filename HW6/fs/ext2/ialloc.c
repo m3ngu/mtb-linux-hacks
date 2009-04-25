@@ -589,6 +589,7 @@ got:
 	ei->i_frag_no = 0;
 	ei->i_frag_size = 0;
 	ei->i_file_acl = 0;
+        ei->i_file_tags = 0; // HW6
 	ei->i_dir_acl = 0;
 	ei->i_dtime = 0;
 	ei->i_block_group = group;
