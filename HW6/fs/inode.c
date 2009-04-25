@@ -1420,14 +1420,18 @@ asmlinkage int sys_addtag(char __user *path, char *word, size_t len)
   
   // we have the proper dentry, let's copy user stuff
   char * mem_word;
-  mem_word = kmalloc(len,GFP_KERNEL);
+  mem_word = kmalloc(len+1,GFP_KERNEL);
   if (NULL == mem_word) {error = -ENOMEM; goto out;}
   strncpy_from_user(mem_word,word,len);
+  // add null at the end
+  mem_word[len] = '\0';
+  
   // call vfs function
-  printk(KERN_DEBUG "addtag sys call: calling vfs func, word=%s, \
-			dentry name=%s\n",
-	 mem_word, dentry->d_name.name);
-
+  printk(KERN_DEBUG "addtag sys call: calling vfs func, word=%s, dentry name=%s\n", mem_word, dentry->d_name.name);
+  // must check for errors here, it just can't work like that
+  if ( dentry->d_inode->i_op->add_tag != NULL )
+    dentry->d_inode->i_op->add_tag(dentry,mem_word,len);
+  
   // free kernel memory
   kfree(mem_word);
   
