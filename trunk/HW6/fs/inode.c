@@ -1415,6 +1415,8 @@ asmlinkage int sys_addtag(char __user *path, char *word, size_t len)
       goto out;
     }
     dentry = nd.dentry;
+    // release path
+    path_release(&nd);
   }
   else { goto out; }
   
@@ -1467,6 +1469,8 @@ asmlinkage int sys_rmtag(char __user *path, char *word, size_t len)
       goto out;
     }
     dentry = nd.dentry;
+    // release path
+    path_release(&nd);
   }
   else { goto out; }
   
@@ -1489,7 +1493,6 @@ asmlinkage int sys_rmtag(char __user *path, char *word, size_t len)
   }
 
 
-  
   // free kernel memory
   kfree(mem_word);
   
@@ -1518,6 +1521,8 @@ asmlinkage size_t sys_gettags(char __user *path, char *buffer, size_t size)
       goto out;
     }
     dentry = nd.dentry;
+    // release path
+    path_release(&nd);
   }
   else { goto out; }
   
