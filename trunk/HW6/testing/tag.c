@@ -12,7 +12,7 @@ _syscall3(size_t, gettags, char*, path, char*, buffer, size_t, sizecd)
 
 
 int main (int argc, char *argv[]) {
-   
+   int status;
    char* file = NULL;
    char tag[4096];
    
@@ -24,9 +24,9 @@ int main (int argc, char *argv[]) {
    // If there is only 1 argument, we list the tags
    if (argc == 2) {
 
-      errno = gettags(file, tag, sizeof(tag));
+      status = gettags(file, tag, sizeof(tag));
 
-      if (!errno) {
+      if (status >= 0) {
          printf("File %s has tags %s\n", file, tag);
       } else {
          perror("ERROR (TAG): ");
@@ -41,9 +41,9 @@ int main (int argc, char *argv[]) {
          
          // Adding
 
-         errno = addtag(file, tag, strlen(tag));
+         status = addtag(file, tag, strlen(tag));
 
-         if (!errno) {
+         if (status == 0) {
             printf("Added tag \"%s\" to file %s\n", tag, file);
          } else {
             perror("ERROR (TAG): "); 
@@ -53,9 +53,9 @@ int main (int argc, char *argv[]) {
          
          // Removing
 
-         errno = addtag(file, tag, strlen(tag));
+         status = rmtag(file, tag, strlen(tag));
 
-         if (!errno) {
+         if (status == 0) {
             printf("Removed tag \"%s\" from file %s\n", tag, file);
          } else {
             perror("ERROR (TAG): ");
@@ -67,11 +67,11 @@ int main (int argc, char *argv[]) {
       
    } else {
 wrong_arg:
-      errno = EINVAL;
-      perror("Usage: tag file (optional:add/rm {tag})");
+      printf("Usage: tag file (optional:add/rm {tag})\n");
+      return EXIT_FAILURE;
    }
 
-   return errno;
+   return EXIT_SUCCESS;
 
 }
 
