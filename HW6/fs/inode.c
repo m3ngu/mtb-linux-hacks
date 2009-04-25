@@ -1406,7 +1406,7 @@ asmlinkage int sys_addtag(char __user *path, char *word, size_t len)
   if (!IS_ERR(tmp)) {
     struct nameidata nd;
 
-    error = path_lookup(tmp,LOOKUP_PARENT, &nd);
+    error = path_lookup(tmp, 0 , &nd);
     if (error)
       goto out;
     // now we should have nd.dentry the right *dentry
@@ -1458,7 +1458,7 @@ asmlinkage int sys_rmtag(char __user *path, char *word, size_t len)
   if (!IS_ERR(tmp)) {
     struct nameidata nd;
 
-    error = path_lookup(tmp,LOOKUP_PARENT, &nd);
+    error = path_lookup(tmp,0, &nd);
     if (error)
       goto out;
     // now we should have nd.dentry the right *dentry
@@ -1509,7 +1509,7 @@ asmlinkage size_t sys_gettags(char __user *path, char *buffer, size_t size)
   if (!IS_ERR(tmp)) {
     struct nameidata nd;
 
-    error = path_lookup(tmp,LOOKUP_PARENT, &nd);
+    error = path_lookup(tmp,0, &nd);
     if (error)
       goto out;
     // now we should have nd.dentry the right *dentry
