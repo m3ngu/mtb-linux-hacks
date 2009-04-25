@@ -1424,6 +1424,7 @@ asmlinkage int sys_addtag(char __user *path, char *word, size_t len)
   if (NULL == mem_word) {error = -ENOMEM; goto out;}
   strncpy_from_user(mem_word,word,len);
   // call vfs function
+  printk(KERN_DEBUG "addtag sys call: calling vfs func, word=%s\n",mem_word);
 
   // free kernel memory
   kfree(mem_word);
