@@ -1368,10 +1368,13 @@ size_t ext2_gettags (struct dentry *d, char *buf, size_t buflen) {
 	}
 	bh = sb_bread(node->i_sb, block_id);
 	char *curr = bh->b_data;
+	short ptrbuf; // valid pointer
+
 	for ( i = 0; i < EXT2_MAX_TAGS; i++ ) {
 		unsigned short taglen;
 		/* read first two bytes for taglength */
 		/* XXX maybe? */
+		memcpy(&ptrbuf, curr, 2);
 		taglen = le16_to_cpu(*curr);
 		curr += 2;
 		total_bytes += taglen + 1;
