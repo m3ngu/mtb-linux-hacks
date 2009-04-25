@@ -1396,6 +1396,7 @@ asmlinkage int sys_addtag(char __user *path, char *word, size_t len)
   int error = 0;
   char * tmp;
   struct dentry *dentry;
+  struct nameidata nd;
 
   // dummy check
   if (len == 0)
@@ -1404,7 +1405,6 @@ asmlinkage int sys_addtag(char __user *path, char *word, size_t len)
   tmp = getname(path);
   error = PTR_ERR(tmp);
   if (!IS_ERR(tmp)) {
-    struct nameidata nd;
 
     error = path_lookup(tmp, 0 , &nd);
     if (error)
@@ -1415,8 +1415,6 @@ asmlinkage int sys_addtag(char __user *path, char *word, size_t len)
       goto out;
     }
     dentry = nd.dentry;
-    // release path
-    path_release(&nd);
   }
   else { goto out; }
   
@@ -1437,6 +1435,9 @@ asmlinkage int sys_addtag(char __user *path, char *word, size_t len)
   	printk(KERN_DEBUG "No such function 'add_tag'\n");
   	error = -ENOSYS; /* XXX probably not right */
   }
+
+  // release path
+  path_release(&nd);
   // free kernel memory
   kfree(mem_word);
   
@@ -1450,6 +1451,7 @@ asmlinkage int sys_rmtag(char __user *path, char *word, size_t len)
   int error = 0;
   char * tmp;
   struct dentry *dentry;
+  struct nameidata nd;
 
   // dummy check
   if (len == 0)
@@ -1458,7 +1460,6 @@ asmlinkage int sys_rmtag(char __user *path, char *word, size_t len)
   tmp = getname(path);
   error = PTR_ERR(tmp);
   if (!IS_ERR(tmp)) {
-    struct nameidata nd;
 
     error = path_lookup(tmp,0, &nd);
     if (error)
@@ -1469,8 +1470,6 @@ asmlinkage int sys_rmtag(char __user *path, char *word, size_t len)
       goto out;
     }
     dentry = nd.dentry;
-    // release path
-    path_release(&nd);
   }
   else { goto out; }
   
@@ -1492,7 +1491,8 @@ asmlinkage int sys_rmtag(char __user *path, char *word, size_t len)
   	error = -ENOSYS; /* XXX probably not right */
   }
 
-
+  // release path
+  path_release(&nd);
   // free kernel memory
   kfree(mem_word);
   
@@ -1506,11 +1506,11 @@ asmlinkage size_t sys_gettags(char __user *path, char *buffer, size_t size)
   int error = 0;
   char * tmp;
   struct dentry *dentry;
+  struct nameidata nd;
 
   tmp = getname(path);
   error = PTR_ERR(tmp);
   if (!IS_ERR(tmp)) {
-    struct nameidata nd;
 
     error = path_lookup(tmp,0, &nd);
     if (error)
@@ -1521,8 +1521,6 @@ asmlinkage size_t sys_gettags(char __user *path, char *buffer, size_t size)
       goto out;
     }
     dentry = nd.dentry;
-    // release path
-    path_release(&nd);
   }
   else { goto out; }
   
@@ -1541,6 +1539,9 @@ asmlinkage size_t sys_gettags(char __user *path, char *buffer, size_t size)
   	error = -ENOSYS; /* XXX probably not right */
   }
   
+
+  // release path
+  path_release(&nd);
 
  out:
   return error;
