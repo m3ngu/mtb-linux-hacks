@@ -1440,9 +1440,82 @@ asmlinkage int sys_addtag(char __user *path, char *word, size_t len)
   return error;
 }
 
-asmlinkage int sys_rmtag(char __user *path, char *word, size_t len) {return 0;}
+asmlinkage int sys_rmtag(char __user *path, char *word, size_t len) 
+{
+  int error = 0;
+  char * tmp;
+  struct dentry *dentry;
 
-asmlinkage size_t sys_gettags(char __user *path, char *buffer, size_t size) {return 0;}
+  // dummy check
+  if (len == 0)
+    return -EINVAL;
+
+  tmp = getname(path);
+  error = PTR_ERR(tmp);
+  if (!IS_ERR(tmp)) {
+    struct nameidata nd;
+
+    error = path_lookup(tmp,LOOKUP_PARENT, &nd);
+    if (error)
+      goto out;
+    // now we should have nd.dentry the right *dentry
+    if (IS_ERR(nd.dentry)) {
+      error = PTR_ERR(nd.dentry); // error pointer in dentry
+      goto out;
+    }
+    dentry = nd.dentry;
+  }
+  else { goto out; }
+  
+  // we have the proper dentry, let's copy user stuff
+  char * mem_word;
+  mem_word = kmalloc(len+1,GFP_KERNEL);
+  if (NULL == mem_word) {error = -ENOMEM; goto out;}
+  strncpy_from_user(mem_word,word,len);
+  // add null at the end
+  mem_word[len] = '\0';
+  
+  // call vfs function
+  printk(KERN_DEBUG "rmtag sys call: calling vfs func, word=%s, dentry name=%s\n", mem_word, dentry->d_name.name);
+  
+  // free kernel memory
+  kfree(mem_word);
+  
+
+ out:
+  return error;
+}
+
+asmlinkage size_t sys_gettags(char __user *path, char *buffer, size_t size) 
+{
+  int error = 0;
+  char * tmp;
+  struct dentry *dentry;
+
+  tmp = getname(path);
+  error = PTR_ERR(tmp);
+  if (!IS_ERR(tmp)) {
+    struct nameidata nd;
+
+    error = path_lookup(tmp,LOOKUP_PARENT, &nd);
+    if (error)
+      goto out;
+    // now we should have nd.dentry the right *dentry
+    if (IS_ERR(nd.dentry)) {
+      error = PTR_ERR(nd.dentry); // error pointer in dentry
+      goto out;
+    }
+    dentry = nd.dentry;
+  }
+  else { goto out; }
+  
+  // call vfs function
+  printk(KERN_DEBUG "gettag sys call: calling vfs func, dentry name=%s\n", dentry->d_name.name);
+  
+
+ out:
+  return error;
+}
 
 
 
