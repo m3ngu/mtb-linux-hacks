@@ -404,6 +404,10 @@ struct inode_operations ext2_dir_inode_operations = {
 #endif
 	.setattr	= ext2_setattr,
 	.permission	= ext2_permission,
+	/* HW6 additions: */
+	.add_tag 	= ext2_addtag,
+	.rm_tag 	= ext2_rmtag,
+	.get_tags	= ext2_gettags,
 };
 
 struct inode_operations ext2_special_inode_operations = {
