@@ -5,6 +5,7 @@ include/linux/fs.h
 fs/ext2/namei.c
 fs/ext2/file.c
 fs/ext2/inode.c
+fs/ext2/ialloc.c
 fs/ext2/ext2.h
 fs/namei.c
 fs/inode.c
