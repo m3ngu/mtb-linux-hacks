@@ -1395,6 +1395,7 @@ asmlinkage int sys_addtag(char __user *path, char *word, size_t len)
 {
   int error = 0;
   char * tmp;
+  struct dentry *dentry;
 
   // dummy check
   if (len == 0)
@@ -1403,7 +1404,6 @@ asmlinkage int sys_addtag(char __user *path, char *word, size_t len)
   tmp = getname(path);
   error = PTR_ERR(tmp);
   if (!IS_ERR(tmp)) {
-    struct dentry *dentry;
     struct nameidata nd;
 
     error = path_lookup(tmp,LOOKUP_PARENT, &nd);
@@ -1424,7 +1424,9 @@ asmlinkage int sys_addtag(char __user *path, char *word, size_t len)
   if (NULL == mem_word) {error = -ENOMEM; goto out;}
   strncpy_from_user(mem_word,word,len);
   // call vfs function
-  printk(KERN_DEBUG "addtag sys call: calling vfs func, word=%s\n",mem_word);
+  printk(KERN_DEBUG "addtag sys call: calling vfs func, word=%s, \
+			dentry name=%s\n",
+	 mem_word, dentry->d_name.name);
 
   // free kernel memory
   kfree(mem_word);
