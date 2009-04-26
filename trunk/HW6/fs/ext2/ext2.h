@@ -130,7 +130,7 @@ extern void ext2_set_inode_flags(struct inode *inode);
 extern int ext2_addtag (struct dentry *d, const char *tag, size_t taglen);
 extern int ext2_rmtag (struct dentry *d, const char *tag, size_t taglen);
 extern size_t ext2_gettags (struct dentry *d, char *buf, size_t buflen);
-
+extern void ext2_tags_clear(struct inode *inode);
 
 /* ioctl.c */
 extern int ext2_ioctl (struct inode *, struct file *, unsigned int,
