@@ -1527,7 +1527,7 @@ asmlinkage size_t sys_gettags(char __user *path, char *buffer, size_t size)
   char *k_buf = kmalloc(size, GFP_KERNEL);
   if (NULL == k_buf) {
   	error = -ENOMEM;
-  	goto out;
+  	goto out_path;
   }
   
   // call vfs function
@@ -1537,13 +1537,23 @@ asmlinkage size_t sys_gettags(char __user *path, char *buffer, size_t size)
   } else {
   	printk(KERN_DEBUG "No such function 'get_tags'\n");
   	error = -ENOSYS; /* XXX probably not right */
+  	goto out_buf;
   }
-  
-
+  if (error <= size) {
+  	int s = copy_to_user(buffer, k_buf, error);
+  	if (s) {
+  		printk(KERN_DEBUG "Error (%d) in gettags copy_to_user\n", s);
+  		error = -ENOMEM; // honestly, no idea how this would happen
+  	} else {
+  		printk(KERN_DEBUG "Copied %d bytes to user buffer\n",error);
+  	}
+  }
+out_buf:
+  kfree(k_buf);
+out_path:
   // release path
   path_release(&nd);
-
- out:
+out:
   return error;
 }
 
