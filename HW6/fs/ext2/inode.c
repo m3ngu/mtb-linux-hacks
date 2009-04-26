@@ -1290,12 +1290,30 @@ int ext2_addtag (struct dentry *d, const char *tag, size_t taglen) {
 	/* maybe ? type questionable */
 	sector_t block_id = ei->i_file_tags;
 	if (!block_id) {
+
+		/* We need to allocate a new block */
+		/* we need to crib this code from xattr.c */
+		int error = 0;
+		int goal = le32_to_cpu(
+			EXT2_SB(i->i_sb)->s_es->s_first_data_block) +
+			ei->i_block_group * EXT2_BLOCKS_PER_GROUP(i->i_sb);
+		block_id = ext2_new_block(i, goal, NULL, NULL, &error);
+		if (error) {
+			printk(KERN_ERR "Unable to allocate block!\n");
+			goto out;
+		}
 		/* get new block */
-		printk(KERN_ERR "In addtag: can't actually allocate the block yet\n");
-		goto out;
+		printk(KERN_DEBUG "In addtag: allocated block %d\n", block_id);
 		ei->i_file_tags = block_id;
 	}
 	bh = sb_bread(i->i_sb, block_id);
+	char *block_data = bh->b_data;
+	*( (unsigned short *) block_data) = cpu_to_le16((unsigned short) taglen);
+	block_data += 2; /* we've already specified 16 bits */
+	strncpy(block_data, tag, taglen);
+	/* XXX also bad, in different ways */
+	*(block_data + taglen ) = '\0';
+ 	*(block_data + taglen + 1) = '\0';
 	
 	/*
 		get buffer head for tag block
@@ -1306,10 +1324,12 @@ int ext2_addtag (struct dentry *d, const char *tag, size_t taglen) {
 			// corner case with previous
 		check if there is space in the block for a new tag
 		add tag to block
-		make inode as updated (ctime)
+		make inode as updated (ctime)  XXX still not done
 		mark buffer head dirty
 			
 	*/
+	i->i_ctime = CURRENT_TIME_SEC;
+	mark_buffer_dirty(bh);
 out:
 	up_write(&ei->xattr_sem);
 	return 0;
@@ -1366,16 +1386,21 @@ size_t ext2_gettags (struct dentry *d, char *buf, size_t buflen) {
 		printk(KERN_DEBUG "In gettags on %s: no tags\n", d->d_name.name);
 		goto out;
 	}
+	printk(KERN_DEBUG "In gettags: reading block %d\n", block_id);
 	bh = sb_bread(node->i_sb, block_id);
 	char *curr = bh->b_data;
 	short ptrbuf; // valid pointer
 
 	for ( i = 0; i < EXT2_MAX_TAGS; i++ ) {
+		/* XXX premature exit from loop if we overrun the block size!*/
 		unsigned short taglen;
 		/* read first two bytes for taglength */
 		/* XXX maybe? */
 		memcpy(&ptrbuf, curr, 2);
 		taglen = le16_to_cpu(*curr);
+		printk(KERN_DEBUG "Loop %2d, length %u, offset %d\n", 
+			i, taglen, curr - bh->b_data);
+		if (!taglen) break;
 		curr += 2;
 		total_bytes += taglen + 1;
 		if (total_bytes < buflen) {

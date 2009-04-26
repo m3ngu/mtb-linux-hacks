@@ -27,7 +27,7 @@ int main (int argc, char *argv[]) {
       status = gettags(file, tag, sizeof(tag));
 
       if (status >= 0) {
-         printf("File %s has tags %s\n", file, tag);
+         printf("File %s has tags of length %d: '%s'\n", file, status, tag);
       } else {
          perror("ERROR (TAG): ");
       }
