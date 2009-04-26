@@ -1280,6 +1280,12 @@ int ext2_setattr(struct dentry *dentry, struct iattr *iattr)
 /* HW6 additions */
 #define EXT2_MAX_TAGS 16
 
+void ext2_tags_clear(struct inode *inode) {
+	ext2_free_blocks(inode, EXT2_I(inode)->i_file_tags, 1);
+	/* XXX what's with the get/forget business? */
+	EXT2_I(inode)->i_file_tags = 0;
+}
+
 int ext2_addtag (struct dentry *d, const char *tag, size_t input_length) {
 	struct inode *node = d->d_inode;
 	struct ext2_inode_info *ei = EXT2_I(node);
@@ -1374,13 +1380,13 @@ int ext2_addtag (struct dentry *d, const char *tag, size_t input_length) {
 	mark_buffer_dirty(bh);
 out:
 	up_write(&ei->xattr_sem);
-	return 0;
+	return error;
 }
 int ext2_rmtag (struct dentry *d, const char *tag, size_t taglen) {
-	struct inode *i = d->d_inode;
-	struct ext2_inode_info *ei = EXT2_I(i);
+	struct inode *node = d->d_inode;
+	struct ext2_inode_info *ei = EXT2_I(node);
 	struct buffer_head *bh = NULL;
-	int error = 0;
+	int error = 0, i = 0;
 
 	down_write(&ei->xattr_sem);
 	
@@ -1392,7 +1398,7 @@ int ext2_rmtag (struct dentry *d, const char *tag, size_t taglen) {
 		//goto out;
 	}
 	printk(KERN_DEBUG "In rmtag on %s: reading buffer\n", d->d_name.name);
-	bh = sb_bread(i->i_sb, block_id);
+	bh = sb_bread(node->i_sb, block_id);
 	char *curr = bh->b_data;
 	char *rm_offset = bh->b_data;
 	char *rm_offset_end = bh->b_data;
@@ -1420,16 +1426,15 @@ int ext2_rmtag (struct dentry *d, const char *tag, size_t taglen) {
 			error = -ESPIPE;
 			break;
 		}
-		//total_bytes += currtaglen + 1;
 
 		if (currtaglen == taglen) {
 		  if (strncmp(curr,tag,taglen) == 0) {
 		    if (tag_found) {
-		      printk(KERN_ERR "ERROR in rmtag: tag saved twice?");
+		      printk(KERN_ERR "ERROR in rmtag: tag saved twice?\n");
 		      error = -EINVAL;
 		      break;
 		    }
-		    rm_offset = (char*) (curr - 2);
+		    rm_offset = curr - 2;
 		    rm_offset_end = curr + currtaglen;
 		    tag_found = 1;
 		  }
@@ -1437,20 +1442,21 @@ int ext2_rmtag (struct dentry *d, const char *tag, size_t taglen) {
 		curr += currtaglen;
 	}
 
-	if (tag_found) {
-	  printk(KERN_ERR "ERROR in rmtag: tag not found");
+	if (!tag_found) {
+	  printk(KERN_DEBUG "ERROR in rmtag: tag not found\n");
 	  error = -EINVAL;
 	  //goto out;
+	} else if (!error) {
+		if ( 1 == i ) ext2_tags_clear(node);
+		else {
+		  // swap stuff
+			size_t swap_buf_size = bh->b_data + bh->b_size - rm_offset_end;
+			memmove(rm_offset, rm_offset_end, swap_buf_size);
+		}
+		node->i_ctime = CURRENT_TIME_SEC;
+		mark_buffer_dirty(bh);
 	}
-	else {
-	  // swap stuff
-	  size_t swap_buf_size = (int) (curr - rm_offset_end);
-	  char swap_buf[ swap_buf_size ];
-	  if (! error)
-	    error = memcpy(swap_buf, rm_offset_end, swap_buf_size);
-	  if (! error)
-	    memcpy(rm_offset, swap_buf, swap_buf_size);
-	}
+	
  out:
 	up_write(&ei->xattr_sem);	
 	return error;
