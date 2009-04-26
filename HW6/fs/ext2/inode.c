@@ -1381,38 +1381,83 @@ int ext2_rmtag (struct dentry *d, const char *tag, size_t taglen) {
 	struct ext2_inode_info *ei = EXT2_I(i);
 	struct buffer_head *bh = NULL;
 	int error = 0;
+
 	down_write(&ei->xattr_sem);
 	
 	/* maybe ? type questionable */
 	sector_t block_id = ei->i_file_tags;
 	if (!block_id) {
-		/* XXX should set error to something more informative */
-		/* like -EINVAL
-			or -EYOUSUCK
-		*/
+	  // get more informative error?
 		printk(KERN_DEBUG "In rmtag on %s: no tags\n", d->d_name.name);
-		goto out;
+		//goto out;
 	}
 	printk(KERN_DEBUG "In rmtag on %s: reading buffer\n", d->d_name.name);
 	bh = sb_bread(i->i_sb, block_id);
-	/* 
-		find out if the tag is in the buffer
-			if not, return NOPE
-		rearrange bytes in the buffer
-		mark inode as updated (ctime)
-		IF there's still at least one tag
-			mark buffer head dirty
-			return 0
-		ELSE
-			clear i_reserved
-			free the block
-			return 0
-		
-	*/
-out:
+	char *curr = bh->b_data;
+	char *rm_offset = bh->b_data;
+	char *rm_offset_end = bh->b_data;
+	int tag_found = 0;
+
+	for ( i = 0; i < EXT2_MAX_TAGS; i++ ) {
+		unsigned short currtaglen;	
+		// workaround goto
+		if (error < 0) continue;
+	
+		/* read first two bytes for currtaglength */
+		if (curr - bh->b_data + 2 > bh->b_size) {
+			printk(KERN_ERR "Overflowing block reading tag size\n");
+			error = -ESPIPE;
+			break;
+		}
+		memcpy(&currtaglen, curr, 2);
+		taglen = le16_to_cpu(currtaglen);
+		printk(KERN_DEBUG "Loop %2d, length %u, offset %d\n", 
+			i, currtaglen, curr - bh->b_data);
+		if (!currtaglen) break;
+		curr += 2;
+		if (curr - bh->b_data + currtaglen > bh->b_size) {
+			printk(KERN_ERR "Overflowing block reading tag content\n");
+			error = -ESPIPE;
+			break;
+		}
+		//total_bytes += currtaglen + 1;
+
+		if (currtaglen == taglen) {
+		  if (strncmp(curr,tag,taglen) == 0) {
+		    if (tag_found) {
+		      printk(KERN_ERR "ERROR in rmtag: tag saved twice?");
+		      error = -EINVAL;
+		      break;
+		    }
+		    rm_offset = (char*) (curr - 2);
+		    rm_offset_end = curr + currtaglen;
+		    tag_found = 1;
+		  }
+		}		
+		curr += currtaglen;
+	}
+
+	if (tag_found) {
+	  printk(KERN_ERR "ERROR in rmtag: tag not found");
+	  error = -EINVAL;
+	  //goto out;
+	}
+	else {
+	  // swap stuff
+	  size_t swap_buf_size = (int) (curr - rm_offset_end);
+	  char swap_buf[ swap_buf_size ];
+	  if (! error)
+	    error = memcpy(swap_buf, rm_offset_end, swap_buf_size);
+	  if (! error)
+	    memcpy(rm_offset, swap_buf, swap_buf_size);
+	}
+ out:
 	up_write(&ei->xattr_sem);	
 	return error;
 }
+
+
+
 size_t ext2_gettags (struct dentry *d, char *buf, size_t buflen) {
 	size_t total_bytes = 0;
 	int i;
