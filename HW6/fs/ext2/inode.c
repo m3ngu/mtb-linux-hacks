@@ -1392,16 +1392,23 @@ size_t ext2_gettags (struct dentry *d, char *buf, size_t buflen) {
 	short ptrbuf; // valid pointer
 
 	for ( i = 0; i < EXT2_MAX_TAGS; i++ ) {
-		/* XXX premature exit from loop if we overrun the block size!*/
 		unsigned short taglen;
 		/* read first two bytes for taglength */
-		/* XXX maybe? */
+		if (curr - bh->b_data + 2 > bh->b_size) {
+			printk(KERN_ERR "Overflowing block reading tag size\n");
+			total_bytes = ESPIPE;
+			break;
+		}
 		memcpy(&ptrbuf, curr, 2);
 		taglen = le16_to_cpu(*curr);
 		printk(KERN_DEBUG "Loop %2d, length %u, offset %d\n", 
 			i, taglen, curr - bh->b_data);
 		if (!taglen) break;
 		curr += 2;
+		if (curr - bh->b_data + taglen > bh->b_size) {
+			printk(KERN_ERR "Overflowing block reading tag content\n");			total_bytes = ESPIPE;
+			break;
+		}
 		total_bytes += taglen + 1;
 		if (total_bytes < buflen) {
 			strncpy(buf, curr, taglen);
