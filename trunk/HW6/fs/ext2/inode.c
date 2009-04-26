@@ -1389,18 +1389,17 @@ size_t ext2_gettags (struct dentry *d, char *buf, size_t buflen) {
 	printk(KERN_DEBUG "In gettags: reading block %d\n", block_id);
 	bh = sb_bread(node->i_sb, block_id);
 	char *curr = bh->b_data;
-	short ptrbuf; // valid pointer
 
 	for ( i = 0; i < EXT2_MAX_TAGS; i++ ) {
-		unsigned short taglen;
+		unsigned short taglen;		
 		/* read first two bytes for taglength */
 		if (curr - bh->b_data + 2 > bh->b_size) {
 			printk(KERN_ERR "Overflowing block reading tag size\n");
 			total_bytes = ESPIPE;
 			break;
 		}
-		memcpy(&ptrbuf, curr, 2);
-		taglen = le16_to_cpu(*curr);
+		memcpy(&taglen, curr, 2);
+		taglen = le16_to_cpu(taglen);
 		printk(KERN_DEBUG "Loop %2d, length %u, offset %d\n", 
 			i, taglen, curr - bh->b_data);
 		if (!taglen) break;
@@ -1417,20 +1416,7 @@ size_t ext2_gettags (struct dentry *d, char *buf, size_t buflen) {
 		}
 		curr += taglen;
 	}
-	/*
-		for i from 1 to 16
-			if there's another tag
-				if its length is not going to cause overflow
-					copy it to the buffer (including null-termination)
-				else 
-					set some flag to indicate that we're not copying?
-				increment size_t retval by the length of this tag plus 1 (for the null)
-			else 
-				break
-		return retval
 
-			
-	*/
 out:
 	up_read(&ei->xattr_sem);
 	return total_bytes;
