@@ -1408,6 +1408,7 @@ size_t ext2_gettags (struct dentry *d, char *buf, size_t buflen) {
 			*(buf + taglen) = '\0';
 			buf += taglen + 1;
 		}
+		curr += taglen;
 	}
 	/*
 		for i from 1 to 16
