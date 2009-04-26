@@ -1539,7 +1539,7 @@ asmlinkage size_t sys_gettags(char __user *path, char *buffer, size_t size)
   	error = -ENOSYS; /* XXX probably not right */
   	goto out_buf;
   }
-  if (error <= size) {
+  if ( error >= 0 && error <= size) {
   	int s = copy_to_user(buffer, k_buf, error);
   	if (s) {
   		printk(KERN_DEBUG "Error (%d) in gettags copy_to_user\n", s);
