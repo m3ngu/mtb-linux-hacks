@@ -1281,9 +1281,12 @@ int ext2_setattr(struct dentry *dentry, struct iattr *iattr)
 #define EXT2_MAX_TAGS 16
 
 void ext2_tags_clear(struct inode *inode) {
-	ext2_free_blocks(inode, EXT2_I(inode)->i_file_tags, 1);
-	/* XXX what's with the get/forget business? */
-	EXT2_I(inode)->i_file_tags = 0;
+	int block_id = EXT2_I(inode)->i_file_tags;
+	if ( block_id ) {
+		ext2_free_blocks(inode, block_id, 1);
+		/* XXX what's with the get/forget business? */
+		EXT2_I(inode)->i_file_tags = 0;
+	}
 }
 
 int ext2_addtag (struct dentry *d, const char *tag, size_t input_length) {
