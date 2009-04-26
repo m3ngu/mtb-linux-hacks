@@ -1280,10 +1280,11 @@ int ext2_setattr(struct dentry *dentry, struct iattr *iattr)
 /* HW6 additions */
 #define EXT2_MAX_TAGS 16
 
-int ext2_addtag (struct dentry *d, const char *tag, size_t taglen) {
-	struct inode *i = d->d_inode;
-	struct ext2_inode_info *ei = EXT2_I(i);
+int ext2_addtag (struct dentry *d, const char *tag, size_t input_length) {
+	struct inode *node = d->d_inode;
+	struct ext2_inode_info *ei = EXT2_I(node);
 	struct buffer_head *bh = NULL;
+	int error = 0, i = 0;
 
 	down_write(&ei->xattr_sem);
 
@@ -1295,9 +1296,9 @@ int ext2_addtag (struct dentry *d, const char *tag, size_t taglen) {
 		/* we need to crib this code from xattr.c */
 		int error = 0;
 		int goal = le32_to_cpu(
-			EXT2_SB(i->i_sb)->s_es->s_first_data_block) +
-			ei->i_block_group * EXT2_BLOCKS_PER_GROUP(i->i_sb);
-		block_id = ext2_new_block(i, goal, NULL, NULL, &error);
+			EXT2_SB(node->i_sb)->s_es->s_first_data_block) +
+			ei->i_block_group * EXT2_BLOCKS_PER_GROUP(node->i_sb);
+		block_id = ext2_new_block(node, goal, NULL, NULL, &error);
 		if (error) {
 			printk(KERN_ERR "Unable to allocate block!\n");
 			goto out;
@@ -1306,29 +1307,70 @@ int ext2_addtag (struct dentry *d, const char *tag, size_t taglen) {
 		printk(KERN_DEBUG "In addtag: allocated block %d\n", block_id);
 		ei->i_file_tags = block_id;
 	}
-	bh = sb_bread(i->i_sb, block_id);
-	char *block_data = bh->b_data;
-	*( (unsigned short *) block_data) = cpu_to_le16((unsigned short) taglen);
-	block_data += 2; /* we've already specified 16 bits */
-	strncpy(block_data, tag, taglen);
-	/* XXX also bad, in different ways */
-	*(block_data + taglen ) = '\0';
- 	*(block_data + taglen + 1) = '\0';
+	bh = sb_bread(node->i_sb, block_id);
+//	char *block_data = bh->b_data;
+//	*( (unsigned short *) block_data) = cpu_to_le16((unsigned short) taglen);
+//	block_data += 2; /* we've already specified 16 bits */
+
+
+	char *curr = bh->b_data;
+	int tag_found = 0;
+	for ( i = 0; i < EXT2_MAX_TAGS; i++ ) {
+		unsigned short taglen;		
+		/* read first two bytes for taglength */
+		if (curr - bh->b_data + 2 > bh->b_size) {
+			printk(KERN_ERR "Overflowing block reading tag size\n");
+			error = -ESPIPE;
+			break;
+		}
+		memcpy(&taglen, curr, 2);
+		taglen = le16_to_cpu(taglen);
+		printk(KERN_DEBUG "Loop %2d, length %u, offset %d\n", 
+			i, taglen, curr - bh->b_data);
+		if (!taglen) break;
+		curr += 2;
+		if (curr - bh->b_data + taglen > bh->b_size) {
+			printk(KERN_ERR "Overflowing block reading tag content\n");			error = -ESPIPE;
+			break;
+		}
+		/*
+			if the current tag IS the tag passed
+				tag_found = 1
+				break
+			else if there is no tag
+				break
+			else continue
+		*/
+
+		if ( taglen == input_length && !strncmp(curr, tag, taglen) ) {
+			tag_found = 1;			
+			break;
+		}
+		curr += taglen;
+	}
 	
-	/*
-		get buffer head for tag block
-		find number of tags in block
-			if 16, return -EINVAL?
-		check if current tag is in block
-			if so, return -ESOMETHING?
-			// corner case with previous
-		check if there is space in the block for a new tag
-		add tag to block
-		make inode as updated (ctime)  XXX still not done
-		mark buffer head dirty
-			
-	*/
-	i->i_ctime = CURRENT_TIME_SEC;
+	if ( i >= EXT2_MAX_TAGS ) {
+		printk(KERN_DEBUG "Tag block full of tags already\n");
+		error = -ENOSPC;
+		goto out;
+	} else if (tag_found) {
+		printk(KERN_DEBUG "Tag already present\n");
+		// EINVAL?
+		goto out;
+	} else if (curr - bh->b_data + input_length + 4 > bh->b_size) {
+		printk(KERN_ERR "Tag cannot be written to block\n");
+		error = -ENOSPC;
+		goto out;
+	}
+	unsigned short len_buf = input_length;
+	len_buf = cpu_to_le16(len_buf);
+	memcpy(curr, &len_buf, 2);
+	curr += 2;
+	memcpy(curr, tag, input_length);
+	len_buf = cpu_to_le16(0);
+	memcpy(curr + input_length, &len_buf, 2);
+
+	node->i_ctime = CURRENT_TIME_SEC;
 	mark_buffer_dirty(bh);
 out:
 	up_write(&ei->xattr_sem);
@@ -1395,7 +1437,7 @@ size_t ext2_gettags (struct dentry *d, char *buf, size_t buflen) {
 		/* read first two bytes for taglength */
 		if (curr - bh->b_data + 2 > bh->b_size) {
 			printk(KERN_ERR "Overflowing block reading tag size\n");
-			total_bytes = ESPIPE;
+			total_bytes = -ESPIPE;
 			break;
 		}
 		memcpy(&taglen, curr, 2);
@@ -1405,7 +1447,8 @@ size_t ext2_gettags (struct dentry *d, char *buf, size_t buflen) {
 		if (!taglen) break;
 		curr += 2;
 		if (curr - bh->b_data + taglen > bh->b_size) {
-			printk(KERN_ERR "Overflowing block reading tag content\n");			total_bytes = ESPIPE;
+			printk(KERN_ERR "Overflowing block reading tag content\n");			
+			total_bytes = -ESPIPE;
 			break;
 		}
 		total_bytes += taglen + 1;
