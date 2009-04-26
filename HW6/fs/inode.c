@@ -1430,7 +1430,7 @@ asmlinkage int sys_addtag(char __user *path, char *word, size_t len)
   printk(KERN_DEBUG "addtag sys call: calling vfs func, word=%s, dentry name=%s\n", mem_word, dentry->d_name.name);
   // must check for errors here, it just can't work like that
   if ( dentry->d_inode->i_op->add_tag != NULL ) {
-    dentry->d_inode->i_op->add_tag(dentry,mem_word,len);
+    error = dentry->d_inode->i_op->add_tag(dentry,mem_word,len);
   } else {
   	printk(KERN_DEBUG "No such function 'add_tag'\n");
   	error = -ENOSYS; /* XXX probably not right */
@@ -1485,7 +1485,7 @@ asmlinkage int sys_rmtag(char __user *path, char *word, size_t len)
   printk(KERN_DEBUG "rmtag sys call: calling vfs func, word=%s, dentry name=%s\n", mem_word, dentry->d_name.name);
   
   if ( dentry->d_inode->i_op->rm_tag != NULL ) {
-    dentry->d_inode->i_op->rm_tag(dentry,mem_word,len);
+    error = dentry->d_inode->i_op->rm_tag(dentry,mem_word,len);
   } else {
   	printk(KERN_DEBUG "No such function 'rm_tag'\n");
   	error = -ENOSYS; /* XXX probably not right */

@@ -27,9 +27,14 @@ int main (int argc, char *argv[]) {
       status = gettags(file, tag, sizeof(tag));
 
       if (status >= 0) {
-         printf("File %s has tags of length %d: '%s'\n", file, status, tag);
+         printf("File %s has tags of length %d:\n", file, status);
+         char *tmp  = tag;
+         while (tmp - tag < status) {
+         	printf("\t%s\n",tmp);
+         	tmp += strlen(tmp) + 1;
+         }
       } else {
-         perror("ERROR (TAG): ");
+         perror("ERROR (TAG)");
       }
 
    // If there are 3 arguments, we're adding or removing tags
@@ -46,7 +51,7 @@ int main (int argc, char *argv[]) {
          if (status == 0) {
             printf("Added tag \"%s\" to file %s\n", tag, file);
          } else {
-            perror("ERROR (TAG): "); 
+            perror("ERROR (TAG)"); 
          }
          
       } else if (!strcmp("rm", argv[2])) {
@@ -58,7 +63,7 @@ int main (int argc, char *argv[]) {
          if (status == 0) {
             printf("Removed tag \"%s\" from file %s\n", tag, file);
          } else {
-            perror("ERROR (TAG): ");
+            perror("ERROR (TAG)");
          }
 
       } else {
