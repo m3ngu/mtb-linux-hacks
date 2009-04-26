@@ -1293,14 +1293,15 @@ int ext2_addtag (struct dentry *d, const char *tag, size_t input_length) {
 	struct inode *node = d->d_inode;
 	struct ext2_inode_info *ei = EXT2_I(node);
 	struct buffer_head *bh = NULL;
-	int error = 0, i = 0;
-
+	int error = 0, i = 0, tag_found = 0;
+	char *curr = NULL;
+	if (node->i_sb->s_blocksize < input_length + 4) return -ENOSPC;
+	
 	down_write(&ei->xattr_sem);
 
 	/* maybe ? type questionable */
 	sector_t block_id = ei->i_file_tags;
 	if (!block_id) {
-
 		/* We need to allocate a new block */
 		/* we need to crib this code from xattr.c */
 		int error = 0;
@@ -1315,15 +1316,15 @@ int ext2_addtag (struct dentry *d, const char *tag, size_t input_length) {
 		/* get new block */
 		printk(KERN_DEBUG "In addtag: allocated block %d\n", block_id);
 		ei->i_file_tags = block_id;
+		bh = sb_getblk(node->i_sb, block_id);
+		curr = bh->b_data;
+		goto write_tag;
+	} else {
+		bh = sb_bread(node->i_sb, block_id);
+		curr = bh->b_data;
 	}
-	bh = sb_bread(node->i_sb, block_id);
-//	char *block_data = bh->b_data;
-//	*( (unsigned short *) block_data) = cpu_to_le16((unsigned short) taglen);
-//	block_data += 2; /* we've already specified 16 bits */
 
-
-	char *curr = bh->b_data;
-	int tag_found = 0;
+	
 	for ( i = 0; i < EXT2_MAX_TAGS; i++ ) {
 		unsigned short taglen;		
 		/* read first two bytes for taglength */
@@ -1342,14 +1343,6 @@ int ext2_addtag (struct dentry *d, const char *tag, size_t input_length) {
 			printk(KERN_ERR "Overflowing block reading tag content\n");			error = -ESPIPE;
 			break;
 		}
-		/*
-			if the current tag IS the tag passed
-				tag_found = 1
-				break
-			else if there is no tag
-				break
-			else continue
-		*/
 
 		if ( taglen == input_length && !strncmp(curr, tag, taglen) ) {
 			tag_found = 1;			
@@ -1366,11 +1359,15 @@ int ext2_addtag (struct dentry *d, const char *tag, size_t input_length) {
 		printk(KERN_DEBUG "Tag already present\n");
 		// EINVAL?
 		goto out;
-	} else if (curr - bh->b_data + input_length + 4 > bh->b_size) {
+	}
+
+write_tag:
+	if (curr - bh->b_data + input_length + 4 > bh->b_size) {
 		printk(KERN_ERR "Tag cannot be written to block\n");
 		error = -ENOSPC;
 		goto out;
 	}
+
 	unsigned short len_buf = input_length;
 	len_buf = cpu_to_le16(len_buf);
 	memcpy(curr, &len_buf, 2);
@@ -1380,6 +1377,7 @@ int ext2_addtag (struct dentry *d, const char *tag, size_t input_length) {
 	memcpy(curr + input_length, &len_buf, 2);
 
 	node->i_ctime = CURRENT_TIME_SEC;
+	set_buffer_uptodate(bh); // right?
 	mark_buffer_dirty(bh);
 out:
 	up_write(&ei->xattr_sem);
