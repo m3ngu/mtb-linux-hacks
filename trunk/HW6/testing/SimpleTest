@@ -17,3 +17,19 @@ touch temp2.txt
 # show tags
 ../tag temp1.txt
 ../tag temp2.txt
+
+# mount unmount
+echo '************* MOUNT / UNMOUNT ****************'
+cd ..
+umount -t ext2 SuperEXT2
+mount -t ext2 /dev/sdb1 SuperEXT2
+cd SuperEXT2
+
+# show tags again
+../tag temp1.txt
+../tag temp2.txt
+
+# rm tags
+../tag temp1.txt rm 'Rocks'
+../tag temp1.txt
+
