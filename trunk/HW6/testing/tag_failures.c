@@ -11,6 +11,22 @@ _syscall3(int   , rmtag  , char*, path, char*, word  , size_t, len)
 _syscall3(size_t, gettags, char*, path, char*, buffer, size_t, sizecd)
 
 
+void print_tags(char *filename) {
+	char tag[4096];
+	int status = gettags(filename, tag, sizeof(tag));
+	
+	if (status >= 0) {
+		printf("File %s has tags of length %d:\n", filename, status);
+		char *tmp  = tag;
+		while (tmp - tag < status) {
+			printf("\t%s\n",tmp);
+			tmp += strlen(tmp) + 1;
+		}
+	} else {
+		perror("Error reading tags");
+	}
+}
+
 int main (int argc, char *argv[]) {
    int status;
    char* file = NULL;
@@ -19,12 +35,23 @@ int main (int argc, char *argv[]) {
    // First argument is filename
    if (argc >= 2) {
       file = argv[1];
+   } else {
+      fprintf(stderr, "Please pass a filename for tagging experiments.\n");
+      exit(1);
    }
    
    
    // ADD TAG TWICE 
    
-   
+   strcpy(tag, "this is tag 1");
+   size_t curlen = strlen(tag);
+   status = addtag(file, tag, curlen);
+   puts("[1] Adding the same tag to a file, twice");
+   if (status) perror("[1] Unexpected failure in test");
+   status = addtag(file, tag, curlen);
+   if (status) perror("[1] Failure adding second tag");
+   print_tags(file);
+   if (rmtag(file,tag,curlen)) perror("[1] Failure cleaning up");
    
    // TOO MANY TAGS
    
@@ -55,18 +82,6 @@ int main (int argc, char *argv[]) {
 /*   // If there is only 1 argument, we list the tags
    if (argc == 2) {
 
-      status = gettags(file, tag, sizeof(tag));
-
-      if (status >= 0) {
-         printf("File %s has tags of length %d:\n", file, status);
-         char *tmp  = tag;
-         while (tmp - tag < status) {
-         	printf("\t%s\n",tmp);
-         	tmp += strlen(tmp) + 1;
-         }
-      } else {
-         perror("ERROR (TAG)");
-      }
 
    // If there are 3 arguments, we're adding or removing tags
    } else if (argc == 4) {
