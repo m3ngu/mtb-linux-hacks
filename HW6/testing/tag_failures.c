@@ -71,7 +71,11 @@ int main (int argc, char *argv[]) {
    
    
    // NO SUCH FILE
-   
+   printf("Let's remove a non-existent tag\n");
+   char badfile[] = "Freaking great file";
+   status = addtag(badfile, badtag, strlen(badtag));
+   if (status < 0)
+     perror("tried to tag a non-existent file");
 
 
    // BUFFER TOO SHORT (gettags)
