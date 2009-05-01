@@ -158,8 +158,8 @@ int main (int argc, char *argv[]) {
 
    // NEGATIVE size_t
    puts("--------------------------------------------------------------------------");
-   puts("[9] Let's try using a negative size_t");
-   status =  addtag(file, "negative", -8);
+   puts("[9] Let's try using a very large size_t");
+   status =  addtag(file, "negative", -8); // hey, it's unsigned, so...
    if (status)
      perror("[9] Tried to tag a file using negative size_t");
 
