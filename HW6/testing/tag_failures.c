@@ -61,7 +61,11 @@ int main (int argc, char *argv[]) {
    
    
    // REMOVE NON-EXISTENT TAG
-   
+   printf("Let's remove a non-existent tag\n");
+   char badtag[] = "Go Canadiens! (it's an hockey team)";
+   status = rmtag(file, badtag, strlen(badtag));
+   if (status < 0)
+     perror("tried to remove non-existent tag");
    
    // WRONG FS
    
