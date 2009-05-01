@@ -1363,7 +1363,7 @@ int ext2_addtag (struct dentry *d, const char *tag, size_t input_length) {
 
 write_tag:
 	if (curr - bh->b_data + input_length + 4 > bh->b_size) {
-		printk(KERN_ERR "Tag cannot be written to block\n");
+		printk(KERN_DEBUG "Tag cannot be written to block\n");
 		error = -ENOSPC;
 		goto out;
 	}
