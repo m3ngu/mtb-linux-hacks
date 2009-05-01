@@ -45,6 +45,7 @@ int main (int argc, char *argv[]) {
    
    // ADD TAG TWICE 
    
+   printf("--------------------------------------------------------------------------\n");
    strcpy(tag, "this is tag 1");
    size_t curlen = strlen(tag);
    status = addtag(file, tag, curlen);
@@ -57,6 +58,7 @@ int main (int argc, char *argv[]) {
    
    // TOO MANY TAGS
 
+   printf("--------------------------------------------------------------------------\n");
    printf("[2] Let's try to add %i tags to a single file\n", MAX_TAGS + 1);
    int len = 0;
    for (int i=1; i <= MAX_TAGS + 1; i++) {
@@ -79,6 +81,7 @@ int main (int argc, char *argv[]) {
    
    
    // REMOVE NON-EXISTENT TAG
+   printf("--------------------------------------------------------------------------\n");
    printf("[4] Let's remove a non-existent tag\n");
    char badtag[] = "Go Canadiens! (it's an hockey team)";
    status = rmtag(file, badtag, strlen(badtag));
@@ -86,12 +89,14 @@ int main (int argc, char *argv[]) {
      perror("[4] Tried to remove non-existent tag");
    
    // WRONG FS
+   printf("--------------------------------------------------------------------------\n");
    printf("[5] Let's tag this file: %s (it shouldn't work if the fs is non-ext2)\n", argv[0]);
    status =  addtag(argv[0], "tag", 3);
    if (status < 0)
      perror("[5] Tried to tag a file in a non-ext2 file system");
    
    // NO SUCH FILE
+   printf("--------------------------------------------------------------------------\n");
    printf("[6] Let's try tag a non-existing file\n");
    char badfile[] = "Freaking great file";
    status = addtag(badfile, badtag, strlen(badtag));
@@ -107,6 +112,11 @@ int main (int argc, char *argv[]) {
    
 
    // NEGATIVE size_t
+   printf("--------------------------------------------------------------------------\n");
+   printf("[9] Let's try using a negative size_t\n");
+   status =  addtag(file, "negative", -8);
+   if (status < 0)
+     perror("[9] Tried to tag a file using negative size_t");
    
 /*   // If there is only 1 argument, we list the tags
    if (argc == 2) {
