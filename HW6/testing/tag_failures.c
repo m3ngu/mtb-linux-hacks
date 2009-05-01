@@ -45,7 +45,7 @@ int main (int argc, char *argv[]) {
    
    // ADD TAG TWICE 
    
-   printf("--------------------------------------------------------------------------\n");
+   puts("--------------------------------------------------------------------------");
    strcpy(tag, "this is tag 1");
    size_t curlen = strlen(tag);
    status = addtag(file, tag, curlen);
@@ -58,7 +58,7 @@ int main (int argc, char *argv[]) {
    
    // TOO MANY TAGS
 
-   printf("--------------------------------------------------------------------------\n");
+   puts("--------------------------------------------------------------------------");
    printf("[2] Let's try to add %i tags to a single file\n", MAX_TAGS + 1);
    int len = 0;
    for (int i=1; i <= MAX_TAGS + 1; i++) {
@@ -77,11 +77,38 @@ int main (int argc, char *argv[]) {
       status = rmtag(file, tag, len);
    }
    
+   puts("--------------------------------------------------------------------------");
    // TAGS TOO LONG
    
+   puts("[3a] trying to add a tag that does not fit in the tag block");
+   status = addtag(file, tag, 4096);
+   if (status) perror("[3a] Failed as expected");
+   else fputs("[3a] Unexpected success (oh dear)\n", stderr);
+   
+   puts("[3b] trying to add multiple tags which combined do not fit");
+   for (int i = 0; i < 400; i++) tag[i] = 'a';
+   tag[400] = '\0';
+   int i;
+   for (i = 0; i < 12; i++) {
+   	  tag[0] = i;
+      status = addtag(file,tag,400);
+      if (status) {
+      	 fprintf(stderr, 
+      	    "[3b] Finally got an error on %d: %s\n", i, strerror(errno));
+      	    break;
+      } else {
+      	 fprintf(stderr, "[3b] Succeeded in adding tag %d\n", i);
+      }
+   }
+   // cleanup...
+   for ( --i ; i >= 0; i--) {
+   	  tag[0] = i;
+   	  status = rmtag(file,tag,400);
+   	  if (status) perror("[3b] Unexpected error cleaning up");
+   }
    
    // REMOVE NON-EXISTENT TAG
-   printf("--------------------------------------------------------------------------\n");
+   puts("--------------------------------------------------------------------------");
    puts("[4] Let's remove a non-existent tag");
    char badtag[] = "Go Canadiens! (it's an hockey team)";
    status = rmtag(file, badtag, strlen(badtag));
@@ -89,14 +116,14 @@ int main (int argc, char *argv[]) {
      perror("[4] Tried to remove non-existent tag");
    
    // WRONG FS
-   printf("--------------------------------------------------------------------------\n");
+   puts("--------------------------------------------------------------------------");
    printf("[5] Let's tag this executable: %s (this shouldn't work given the fs is non-ext2)\n", argv[0]);
    status =  addtag(argv[0], "tag", 3);
    if (status)
      perror("[5] Tried to tag a file in a non-ext2 file system");
    
    // NO SUCH FILE
-   printf("--------------------------------------------------------------------------\n");
+   puts("--------------------------------------------------------------------------");
    puts("[6] Let's try tag a non-existing file");
    char badfile[] = "Freaking great file";
    status = addtag(badfile, badtag, strlen(badtag));
@@ -105,7 +132,7 @@ int main (int argc, char *argv[]) {
 
 
    // BUFFER TOO SHORT (gettags)
-   printf("--------------------------------------------------------------------------\n");
+   puts("--------------------------------------------------------------------------");
    puts("[7] Let's try size_t shorter than buffer");
    strcpy(tag, "this is a loooooooong tag");
    curlen = strlen(tag);
@@ -120,7 +147,7 @@ int main (int argc, char *argv[]) {
    if (rmtag(file,tag,curlen)) perror("[7] Failure cleaning up");
 
    // size_t shorter than buffer
-   printf("--------------------------------------------------------------------------\n");
+   puts("--------------------------------------------------------------------------");
    puts("[8] Let's try size_t shorter than buffer");
    strcpy(tag, "longer than 3");
    status =  addtag(file, tag, 3);
@@ -130,56 +157,24 @@ int main (int argc, char *argv[]) {
       if (rmtag(file,tag,3)) perror("[8] Failure cleaning up");
 
    // NEGATIVE size_t
-   printf("--------------------------------------------------------------------------\n");
+   puts("--------------------------------------------------------------------------");
    puts("[9] Let's try using a negative size_t");
    status =  addtag(file, "negative", -8);
    if (status)
      perror("[9] Tried to tag a file using negative size_t");
+
+   puts("--------------------------------------------------------------------------");
+   puts("[10] trying to access kernel memory");
    
-/*   // If there is only 1 argument, we list the tags
-   if (argc == 2) {
-
-
-   // If there are 3 arguments, we're adding or removing tags
-   } else if (argc == 4) {
-
-      strcpy(tag, argv[3]);
-
-      if (!strcmp("add", argv[2])) {
-         
-         // Adding
-
-         status = addtag(file, tag, strlen(tag));
-
-         if (status == 0) {
-            printf("Added tag \"%s\" to file %s\n", tag, file);
-         } else {
-            perror("ERROR (TAG)"); 
-         }
-         
-      } else if (!strcmp("rm", argv[2])) {
-         
-         // Removing
-
-         status = rmtag(file, tag, strlen(tag));
-
-         if (status == 0) {
-            printf("Removed tag \"%s\" from file %s\n", tag, file);
-         } else {
-            perror("ERROR (TAG)");
-         }
-
-      } else {
-         goto wrong_arg;
-      }
-      
-   } else {
-wrong_arg:
-      printf("Usage: tag file (optional:add/rm {tag})\n");
-      return EXIT_FAILURE;
-   }
-
-   return EXIT_SUCCESS;
-*/
+   if (addtag(file, (char *) 42,100) ) 
+     perror("[10a] addtag won't read kernel memory");
+   else 
+   	 fputs("[10a] no error returned when addtag passed bad pointer\n", stderr);
+   
+   if (gettags(file, (char *) 42,100) ) 
+   	 perror("[10b] gettag won't write kernel memory");
+   else
+    fputs("[10b] no error returned when gettags passed bad pointer\n", stderr);
+   
 }
 
