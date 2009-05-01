@@ -10,6 +10,7 @@ _syscall3(int   , addtag , char*, path, char*, word  , size_t, len)
 _syscall3(int   , rmtag  , char*, path, char*, word  , size_t, len)
 _syscall3(size_t, gettags, char*, path, char*, buffer, size_t, sizecd)
 
+#define MAX_TAGS 16
 
 void print_tags(char *filename) {
 	char tag[4096];
@@ -31,6 +32,7 @@ int main (int argc, char *argv[]) {
    int status;
    char* file = NULL;
    char tag[4096];
+   char errmsg[4096];
    
    // First argument is filename
    if (argc >= 2) {
@@ -54,28 +56,44 @@ int main (int argc, char *argv[]) {
    if (rmtag(file,tag,curlen)) perror("[1] Failure cleaning up");
    
    // TOO MANY TAGS
-   
-   
+
+   printf("[2] Let's try to add %i tags to a single file\n", MAX_TAGS + 1);
+   int len = 0;
+   for (int i=1; i <= MAX_TAGS + 1; i++) {
+      len = sprintf(tag, "%s%d", "tag",i);
+      status = addtag(file, tag, len);
+      if (status) {
+         status = sprintf(errmsg, "[2] Failure adding %s", tag);
+         perror(errmsg);
+         break;
+      }
+   }
+
+   // Clean-up
+   for (int i=1; i < MAX_TAGS + 1; i++) {
+      len = sprintf(tag, "%s%d", "tag",i);
+      status = rmtag(file, tag, len);
+   }
    
    // TAGS TOO LONG
    
    
    // REMOVE NON-EXISTENT TAG
-   printf("Let's remove a non-existent tag\n");
+   printf("[4] Let's remove a non-existent tag\n");
    char badtag[] = "Go Canadiens! (it's an hockey team)";
    status = rmtag(file, badtag, strlen(badtag));
    if (status < 0)
-     perror("tried to remove non-existent tag");
+     perror("[4] Tried to remove non-existent tag");
    
    // WRONG FS
    
    
    // NO SUCH FILE
-   printf("Let's remove a non-existent tag\n");
+   printf("[6] Let's try tag a non-existing file\n");
    char badfile[] = "Freaking great file";
    status = addtag(badfile, badtag, strlen(badtag));
    if (status < 0)
-     perror("tried to tag a non-existent file");
+     perror("[6] Tried to tag a non-existing file");
 
 
    // BUFFER TOO SHORT (gettags)
