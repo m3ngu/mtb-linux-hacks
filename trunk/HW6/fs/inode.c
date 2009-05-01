@@ -1395,6 +1395,7 @@ asmlinkage int sys_addtag(char __user *path, char *word, size_t len)
 {
   int error = 0;
   char * tmp;
+  int real_len;
   struct dentry *dentry;
   struct nameidata nd;
 
@@ -1422,7 +1423,13 @@ asmlinkage int sys_addtag(char __user *path, char *word, size_t len)
   char * mem_word;
   mem_word = kmalloc(len+1,GFP_KERNEL);
   if (NULL == mem_word) {error = -ENOMEM; goto out;}
-  strncpy_from_user(mem_word,word,len);
+  real_len =  strncpy_from_user(mem_word,word,len);
+  if ( 0 > real_len ) {
+    error = -EFAULT;
+    goto out_free;
+  } else if (real_len < len) {
+  	// XXX problem!
+  }
   // add null at the end
   mem_word[len] = '\0';
   
@@ -1437,13 +1444,14 @@ asmlinkage int sys_addtag(char __user *path, char *word, size_t len)
   	error = -ENOSYS; /* XXX probably not right */
   }
 
+out_free:
   // release path
   path_release(&nd);
   // free kernel memory
   kfree(mem_word);
   
 
- out:
+out:
   return error;
 }
 
@@ -1451,6 +1459,7 @@ asmlinkage int sys_rmtag(char __user *path, char *word, size_t len)
 {
   int error = 0;
   char * tmp;
+  int real_len;
   struct dentry *dentry;
   struct nameidata nd;
 
@@ -1478,8 +1487,13 @@ asmlinkage int sys_rmtag(char __user *path, char *word, size_t len)
   char * mem_word;
   mem_word = kmalloc(len+1,GFP_KERNEL);
   if (NULL == mem_word) {error = -ENOMEM; goto out;}
-  strncpy_from_user(mem_word,word,len);
-  // add null at the end
+  real_len =  strncpy_from_user(mem_word,word,len);
+  if ( 0 > real_len ) {
+    error = -EFAULT;
+    goto out_free;
+  } else if (real_len < len) {
+  	// XXX problem!
+  }  // add null at the end
   mem_word[len] = '\0';
   
   // call vfs function
@@ -1493,9 +1507,11 @@ asmlinkage int sys_rmtag(char __user *path, char *word, size_t len)
   	error = -ENOSYS; /* XXX probably not right */
   }
 
+out_free:
   // release path
   path_release(&nd);
   // free kernel memory
+
   kfree(mem_word);
   
 
@@ -1520,7 +1536,7 @@ asmlinkage size_t sys_gettags(char __user *path, char *buffer, size_t size)
     // now we should have nd.dentry the right *dentry
     if (IS_ERR(nd.dentry)) {
       error = PTR_ERR(nd.dentry); // error pointer in dentry
-      goto out;
+      goto out_path;
     }
     dentry = nd.dentry;
   }
@@ -1546,7 +1562,7 @@ asmlinkage size_t sys_gettags(char __user *path, char *buffer, size_t size)
   	int s = copy_to_user(buffer, k_buf, error);
   	if (s) {
   		printk(KERN_DEBUG "Error (%d) in gettags copy_to_user\n", s);
-  		error = -ENOMEM; // honestly, no idea how this would happen
+  		error = -EFAULT;
   	} else {
   		printk(KERN_DEBUG "Copied %d bytes to user buffer\n",error);
   	}
