@@ -86,7 +86,10 @@ int main (int argc, char *argv[]) {
      perror("[4] Tried to remove non-existent tag");
    
    // WRONG FS
-   
+   printf("[5] Let's tag this file: %s (it shouldn't work if the fs is non-ext2)\n", argv[0]);
+   status =  addtag(argv[0], "tag", 3);
+   if (status < 0)
+     perror("[5] Tried to tag a file in a non-ext2 file system");
    
    // NO SUCH FILE
    printf("[6] Let's try tag a non-existing file\n");
