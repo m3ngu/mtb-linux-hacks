@@ -85,14 +85,14 @@ int main (int argc, char *argv[]) {
    printf("[4] Let's remove a non-existent tag\n");
    char badtag[] = "Go Canadiens! (it's an hockey team)";
    status = rmtag(file, badtag, strlen(badtag));
-   if (status < 0)
+   if (status)
      perror("[4] Tried to remove non-existent tag");
    
    // WRONG FS
    printf("--------------------------------------------------------------------------\n");
    printf("[5] Let's tag this file: %s (it shouldn't work if the fs is non-ext2)\n", argv[0]);
    status =  addtag(argv[0], "tag", 3);
-   if (status < 0)
+   if (status)
      perror("[5] Tried to tag a file in a non-ext2 file system");
    
    // NO SUCH FILE
@@ -100,22 +100,40 @@ int main (int argc, char *argv[]) {
    printf("[6] Let's try tag a non-existing file\n");
    char badfile[] = "Freaking great file";
    status = addtag(badfile, badtag, strlen(badtag));
-   if (status < 0)
+   if (status)
      perror("[6] Tried to tag a non-existing file");
 
 
    // BUFFER TOO SHORT (gettags)
-   
-   
+   printf("--------------------------------------------------------------------------\n");
+   printf("[7] Let's try size_t shorter than buffer\n");
+   strcpy(tag, "this is a loooooooong tag");
+   curlen = strlen(tag);
+   status =  addtag(file, tag, curlen);
+   if (status)
+      perror("[7] Unexpected error, couldn't add tag for test");
+   print_tags(file);
+   char shortbuf[10];
+   status = gettags(file, shortbuf, sizeof(shortbuf));
+   if (status)
+      perror("[7] Tried to call gettags with a short buffer");
+   if (rmtag(file,tag,curlen)) perror("[7] Failure cleaning up");
+
    // size_t shorter than buffer
-   
-   
+   printf("--------------------------------------------------------------------------\n");
+   printf("[8] Let's try a short buffer in gettags\n");
+   strcpy(tag, "longer than 3");
+   status =  addtag(file, tag, 3);
+   if (status)
+      perror("[8] Tried size_t shorter than buffer");
+   else
+      if (rmtag(file,tag,3)) perror("[8] Failure cleaning up");
 
    // NEGATIVE size_t
    printf("--------------------------------------------------------------------------\n");
    printf("[9] Let's try using a negative size_t\n");
    status =  addtag(file, "negative", -8);
-   if (status < 0)
+   if (status)
      perror("[9] Tried to tag a file using negative size_t");
    
 /*   // If there is only 1 argument, we list the tags
