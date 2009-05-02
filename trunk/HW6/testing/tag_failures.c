@@ -57,7 +57,6 @@ int main (int argc, char *argv[]) {
    if (rmtag(file,tag,curlen)) perror("[1] Failure cleaning up");
    
    // TOO MANY TAGS
-
    puts("--------------------------------------------------------------------------");
    printf("[2] Let's try to add %i tags to a single file\n", MAX_TAGS + 1);
    int len = 0;
@@ -140,10 +139,17 @@ int main (int argc, char *argv[]) {
    if (status)
       perror("[7] Unexpected error, couldn't add tag for test");
    print_tags(file);
-   char shortbuf[10];
+   char shortbuf[10] = {'\1','\1','\1','\1','\1','\1','\1','\1','\1','\1'};
    status = gettags(file, shortbuf, sizeof(shortbuf));
-   if (status)
-      perror("[7] Tried to call gettags with a short buffer (size=10)");
+   if (status > 10) {
+		printf("[7] gettags wants buffer of length %d \n", status);
+		if ( 1 != shortbuf[0] )
+			printf("[7] gettags wrote data to short buffer\n");
+		else 
+			puts("[7] gettags left buffer untouched");
+	} else {
+		puts("[7] foiled by not having enough tags to fill the short buffer!");
+	}
    if (rmtag(file,tag,curlen)) perror("[7] Failure cleaning up");
 
    // size_t shorter than buffer
@@ -154,14 +160,15 @@ int main (int argc, char *argv[]) {
    if (status)
       perror("[8] Tried size_t shorter than buffer");
    else
-      if (rmtag(file,tag,3)) perror("[8] Failure cleaning up");
+   	  print_tags(file);
+   if (rmtag(file,tag,3)) perror("[8] Failure cleaning up");
 
    // NEGATIVE size_t
    puts("--------------------------------------------------------------------------");
    puts("[9] Let's try using a very large size_t");
    status =  addtag(file, "negative", -8); // hey, it's unsigned, so...
    if (status)
-     perror("[9] Tried to tag a file using negative size_t");
+     perror("[9] Tried to tag a file using huge size_t");
 
    puts("--------------------------------------------------------------------------");
    puts("[10] trying to access kernel memory");
