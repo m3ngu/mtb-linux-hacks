@@ -1413,7 +1413,7 @@ asmlinkage int sys_addtag(char __user *path, char *word, size_t len)
     // now we should have nd.dentry the right *dentry
     if (IS_ERR(nd.dentry)) {
       error = PTR_ERR(nd.dentry); // error pointer in dentry
-      goto out;
+      goto out_path;
     }
     dentry = nd.dentry;
   }
@@ -1422,7 +1422,10 @@ asmlinkage int sys_addtag(char __user *path, char *word, size_t len)
   // we have the proper dentry, let's copy user stuff
   char * mem_word;
   mem_word = kmalloc(len+1,GFP_KERNEL);
-  if (NULL == mem_word) {error = -ENOMEM; goto out;}
+  if (NULL == mem_word) {
+    error = -ENOMEM; 
+    goto out_path;
+  }
   real_len =  strncpy_from_user(mem_word,word,len);
   if ( 0 > real_len ) {
     error = -EFAULT;
@@ -1445,10 +1448,11 @@ asmlinkage int sys_addtag(char __user *path, char *word, size_t len)
   }
 
 out_free:
-  // release path
-  path_release(&nd);
   // free kernel memory
   kfree(mem_word);
+out_path:
+  // release path
+  path_release(&nd);
   
 
 out:
@@ -1473,11 +1477,11 @@ asmlinkage int sys_rmtag(char __user *path, char *word, size_t len)
 
     error = path_lookup(tmp,0, &nd);
     if (error)
-      goto out;
+      goto out_path;
     // now we should have nd.dentry the right *dentry
     if (IS_ERR(nd.dentry)) {
       error = PTR_ERR(nd.dentry); // error pointer in dentry
-      goto out;
+      goto out_path;
     }
     dentry = nd.dentry;
   }
@@ -1507,15 +1511,13 @@ asmlinkage int sys_rmtag(char __user *path, char *word, size_t len)
   	error = -ENOSYS; /* XXX probably not right */
   }
 
-out_free:
+out_path:
   // release path
   path_release(&nd);
+out_free:
   // free kernel memory
-
   kfree(mem_word);
-  
-
- out:
+out:
   return error;
 }
 
@@ -1532,7 +1534,7 @@ asmlinkage size_t sys_gettags(char __user *path, char *buffer, size_t size)
 
     error = path_lookup(tmp,0, &nd);
     if (error)
-      goto out;
+      goto out_path;
     // now we should have nd.dentry the right *dentry
     if (IS_ERR(nd.dentry)) {
       error = PTR_ERR(nd.dentry); // error pointer in dentry
