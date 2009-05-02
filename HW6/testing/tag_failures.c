@@ -137,18 +137,18 @@ int main (int argc, char *argv[]) {
    curlen = strlen(tag);
    status =  addtag(file, tag, curlen);
    if (status)
-      perror("[7] Unexpected error, couldn't add tag for test");
+     perror("[7] Unexpected error, couldn't add tag for test");
    print_tags(file);
    char shortbuf[10] = {'\1','\1','\1','\1','\1','\1','\1','\1','\1','\1'};
    status = gettags(file, shortbuf, sizeof(shortbuf));
    if (status > 10) {
-		printf("[7] gettags wants buffer of length %d \n", status);
-		if ( 1 != shortbuf[0] )
-			printf("[7] gettags wrote data to short buffer\n");
-		else 
-			puts("[7] gettags left buffer untouched");
+      printf("[7] gettags wants buffer of length %d \n", status);
+      if ( 1 != shortbuf[0] )
+        printf("[7] gettags wrote data to short buffer\n");
+      else 
+        puts("[7] gettags left buffer untouched");
 	} else {
-		puts("[7] foiled by not having enough tags to fill the short buffer!");
+	   puts("[7] foiled by not having enough tags to fill the short buffer!");
 	}
    if (rmtag(file,tag,curlen)) perror("[7] Failure cleaning up");
 
@@ -156,11 +156,11 @@ int main (int argc, char *argv[]) {
    puts("--------------------------------------------------------------------------");
    puts("[8] Let's try size_t shorter than buffer");
    strcpy(tag, "longer than 3");
-   status =  addtag(file, tag, 3);
+   status = addtag(file, tag, 3);
    if (status)
-      perror("[8] Tried size_t shorter than buffer");
+     perror("[8] Tried size_t shorter than buffer");
    else
-   	  print_tags(file);
+   	 print_tags(file);
    if (rmtag(file,tag,3)) perror("[8] Failure cleaning up");
 
    // NEGATIVE size_t
@@ -181,7 +181,7 @@ int main (int argc, char *argv[]) {
    if (gettags(file, (char *) 42,100) ) 
    	 perror("[10b] gettag won't write kernel memory");
    else
-    fputs("[10b] no error returned when gettags passed bad pointer\n", stderr);
+     fputs("[10b] no error returned when gettags passed bad pointer\n", stderr);
    
 }
 
