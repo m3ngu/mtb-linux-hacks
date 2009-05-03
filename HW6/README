@@ -1,0 +1,18 @@
+README for HW5, group 2 (Ben Warfield, Thierry Bertin-Mahieux, Mengu Sukan)
+
+Files in this package:
+	README 				- This file.
+	homework_work.txt		- In which we assert that this code is correct
+	tags.patch			- actual kernel patch file
+	testing/Makefile		- Makefile for demonstration/test code	
+	...	
+
+To compile all test and demonstration code, run "make" in the testing
+directory. The compiler will look for linux header files in 
+/usr/src/linux-2.6.11.12$(TREE_TAG).  By default, $TREE_TAG is set to "-hwk4", 
+but it can be changed on the command line, e.g.
+
+	make test TREE_TAG='-group2'
+	make test TREE_TAG=''
+
+...
