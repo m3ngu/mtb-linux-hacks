@@ -19,7 +19,7 @@ tag_failures: tag_failures.c
 	$(SYSCALL_COMPILE)
 
 test: $(BIN)
-	echo "no tests defined yet"
+	./SimpleTest.sh; ./tag_failures SuperEXT2/temp2.txt
 
 clean:
 	rm -f $(BIN)
