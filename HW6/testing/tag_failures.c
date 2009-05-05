@@ -158,14 +158,14 @@ int main (int argc, char *argv[]) {
    puts("[8] Let's try size_t shorter than buffer (size_t=12)");
    strcpy(tag, "tag longer than 12");
    curlen = strlen(tag);
-   printf("[8] Tying to add tag \"%s\" but using size_t=12 instead of %i\n", tag, curlen);
+   printf("[8] Trying to add tag \"%s\" but using size_t=12 instead of %i\n", tag, curlen);
    curlen = 12; // instead of strlen(tag);
    status = addtag(file, tag, curlen);
 
    if (status)
      perror("[8] Tried size_t shorter than buffer");
    else {
-      puts("[8] gettags should truncate tag to size_t (=12)");
+      puts("[8] gettags should show tag truncated to size_t (=12)");
    	 print_tags(file);
    }
    if (rmtag(file,tag,curlen)) perror("[8] Failure cleaning up");
