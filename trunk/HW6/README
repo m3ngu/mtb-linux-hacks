@@ -1,15 +1,17 @@
 README for HW6, group 2 (Ben Warfield, Thierry Bertin-Mahieux, Mengu Sukan)
 
 Files in this package:
-	README 				- This file.
-	homework_work.txt		- In which we assert that this code is correct
-	tags.patch			- actual kernel patch file
-	testing/Makefile		- Makefile for demonstration/test code	
-	testing/SimpleTest.sh		- Shell script for demo, mounts EXT2; adds,gets,
-					  and removes tags
-	testing/tag.c			- Userland wrapper C program to access tag-related syscalls
-	testing/tag_failures.c		- C program to test a handful of cases that should make
-					  tags fail to ensure graceful failure / correct error codes
+	README                 	- This file.
+	homework_work.txt      	- In which we assert that this code is correct
+	tags.patch            	- actual kernel patch file
+	testing/Makefile       	- Makefile for demonstration/test code	
+	testing/SimpleTest.sh  	- Shell script for demo, mounts EXT2; 
+					adds,gets, and removes tags
+	testing/tag.c       	- Userland wrapper C program to access 
+					tag-related syscalls
+	testing/tag_failures.c	- C program to test a handful of cases that 
+					should make tags fail to ensure 
+					graceful failure / correct error codes
 
 To compile all test and demonstration code, run "make" in the testing
 directory. The compiler will look for linux header files in 
