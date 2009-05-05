@@ -74,14 +74,13 @@ New Files:
 
 Specific changes:
 
-
     Thierry did the initial system calls.
-    Mengu coded the main user function ('tag').
+    Mengu coded the main user program ('tag').
     Ben did the initial ext2 specific functions.
     Layers were tied together by everyone at once.
     Test code and debugging was a team effort.
     Mengu was in control of the projector in the meeting room.
-    Ben brought a dry marker.
+    Ben brought a dry-erase marker.
     Thierry wrote on the white board.
     
 
