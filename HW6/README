@@ -1,18 +1,60 @@
-README for HW5, group 2 (Ben Warfield, Thierry Bertin-Mahieux, Mengu Sukan)
+README for HW6, group 2 (Ben Warfield, Thierry Bertin-Mahieux, Mengu Sukan)
 
 Files in this package:
 	README 				- This file.
 	homework_work.txt		- In which we assert that this code is correct
 	tags.patch			- actual kernel patch file
 	testing/Makefile		- Makefile for demonstration/test code	
-	...	
+	testing/SimpleTest.sh		- Shell script for demo, mounts EXT2; adds,gets,
+					  and removes tags
+	testing/tag.c			- Userland wrapper C program to access tag-related syscalls
+	testing/tag_failures.c		- C program to test a handful of cases that should make
+					  tags fail to ensure graceful failure / correct error codes
 
 To compile all test and demonstration code, run "make" in the testing
 directory. The compiler will look for linux header files in 
-/usr/src/linux-2.6.11.12$(TREE_TAG).  By default, $TREE_TAG is set to "-hwk4", 
+/usr/src/linux-2.6.11.12$(TREE_TAG).  By default, $TREE_TAG is set to "-hwk6", 
 but it can be changed on the command line, e.g.
 
-	make test TREE_TAG='-group2'
-	make test TREE_TAG=''
+	make all TREE_TAG='-group2'
+	make all TREE_TAG=''
 
-...
+To run all of the test described below, you can make the test target
+
+	make test
+
+The test target contains the following tests:
+To see a simple demo of tags being added/removed/gotten simply, we run the shell script
+
+	SimpleTest.sh
+
+In a nutshell, this script
+ - Creates a dir (called SuperEXT2)
+ - Mounts /dev/sdb1 to that dir
+ - Creates a couple of files
+ - Tags them
+ - Shows the newly added tags
+ - Unmounts and re-mounts the dev
+ - Prints the tags again to show that they persisted 
+ - Removes one of the tags
+
+Tags can also be added/removed/displayed manually using
+
+	tag /path/of/a/file			# displays the tags
+	tag /path/of/a/file add this_is_a_tag	# adds a tag
+	tag /path/of/a/file rm this_is_a_tag	# removes a tag
+
+Last but not least, we also have a tag_failures executable, which can be run with
+a single argument
+
+	tag_failures /path/of/a/file
+
+This program checks various failure cases like
+ - buffers being too short
+ - trying to remove non-existing tags
+ - trying to add too many tags
+ - ...
+to ensure that our system calls
+(a) handle these cases without causing any inconsistencies in the system/FS and
+(b) return the right error codes
+
