@@ -1409,7 +1409,7 @@ asmlinkage int sys_addtag(char __user *path, char *word, size_t len)
 
     error = path_lookup(tmp, 0 , &nd);
     if (error)
-      goto out_path;
+      goto out_putname;
     // now we should have nd.dentry the right *dentry
     if (IS_ERR(nd.dentry)) {
       error = PTR_ERR(nd.dentry); // error pointer in dentry
@@ -1453,6 +1453,7 @@ out_free:
 out_path:
   // release path
   path_release(&nd);
+out_putname:
   putname(tmp);
 out:
   return error;
@@ -1476,7 +1477,7 @@ asmlinkage int sys_rmtag(char __user *path, char *word, size_t len)
 
     error = path_lookup(tmp,0, &nd);
     if (error)
-      goto out_path;
+      goto out_putname;
     // now we should have nd.dentry the right *dentry
     if (IS_ERR(nd.dentry)) {
       error = PTR_ERR(nd.dentry); // error pointer in dentry
@@ -1516,6 +1517,7 @@ out_free:
 out_path:
   // release path
   path_release(&nd);
+out_putname:
   putname(tmp);
 out:
   return error;
@@ -1534,7 +1536,7 @@ asmlinkage size_t sys_gettags(char __user *path, char *buffer, size_t size)
 
     error = path_lookup(tmp,0, &nd);
     if (error)
-      goto out_path;
+      goto out_putname;
     // now we should have nd.dentry the right *dentry
     if (IS_ERR(nd.dentry)) {
       error = PTR_ERR(nd.dentry); // error pointer in dentry
@@ -1575,6 +1577,7 @@ out_buf:
 out_path:
   // release path
   path_release(&nd);
+out_putname:
   putname(tmp);
 out:
   return error;
