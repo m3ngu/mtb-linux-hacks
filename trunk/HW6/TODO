@@ -1,4 +1,0 @@
-* define format for storing tags
-* actually implement the store/retrieve/remove bits (duh)
-* patch unlink (or whatever it is that removes an inode) to free our tag block if necessary
-* permissions?
