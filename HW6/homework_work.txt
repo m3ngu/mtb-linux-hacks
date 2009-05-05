@@ -67,3 +67,16 @@ New Files:
 	None.        
 
 Specific changes:
+
+
+    Thierry did the initial system calls.
+    Mengu coded the main user function ('tag').
+    Ben did the initial ext2 specific functions.
+    Layers were tied together by everyone at once.
+    Test code and debugging was a team effort.
+    Mengu was in control of the projector in the meeting room.
+    Ben brought a dry marker.
+    Thierry wrote on the white board.
+    
+
+
