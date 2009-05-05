@@ -132,8 +132,8 @@ int main (int argc, char *argv[]) {
 
    // BUFFER TOO SHORT (gettags)
    puts("--------------------------------------------------------------------------");
-   puts("[7] Let's try size_t shorter than buffer");
-   strcpy(tag, "this is a loooooooong tag");
+   puts("[7] Let's try with a short buffer (len: 10)");
+   strcpy(tag, "this is a loooooooong tag (at least, longer than 10)");
    curlen = strlen(tag);
    status =  addtag(file, tag, curlen);
    if (status)
@@ -154,13 +154,19 @@ int main (int argc, char *argv[]) {
 
    // size_t shorter than buffer
    puts("--------------------------------------------------------------------------");
-   puts("[8] Let's try size_t shorter than buffer");
-   strcpy(tag, "longer than 3");
-   status = addtag(file, tag, 3);
+   puts("[8] Let's try size_t shorter than buffer (size_t=12)");
+   strcpy(tag, "tag longer than 12");
+   curlen = strlen(tag);
+   printf("[8] Tying to add tag \"%s\" but using size_t=12 instead of %i\n", tag, curlen);
+   curlen = 12; // instead of strlen(tag);
+   status = addtag(file, tag, curlen);
+
    if (status)
      perror("[8] Tried size_t shorter than buffer");
-   else
+   else {
+      puts("[8] gettags should truncate tag to size_t (=12)");
    	 print_tags(file);
+   }
    if (rmtag(file,tag,3)) perror("[8] Failure cleaning up");
 
    // NEGATIVE size_t
