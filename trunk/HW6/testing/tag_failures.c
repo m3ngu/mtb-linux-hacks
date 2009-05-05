@@ -80,6 +80,7 @@ int main (int argc, char *argv[]) {
    // TAGS TOO LONG
    
    puts("[3a] trying to add a tag that does not fit in the tag block");
+   for (int i = 0; i < sizeof(tag); i++) tag[i] = 'q';
    status = addtag(file, tag, 4096);
    if (status) perror("[3a] Failed as expected");
    else fputs("[3a] Unexpected success (oh dear)\n", stderr);
@@ -189,5 +190,22 @@ int main (int argc, char *argv[]) {
    else
      fputs("[10b] no error returned when gettags passed bad pointer\n", stderr);
    
+puts("--------------------------------------------------------------------------");
+   puts("[11] eeeevil tag tests");
+   
+   puts("[11a] trying to add evil tag to file");
+   char evil[12] = { 'e','e','e','e','v','i','l','\0','\0','\0','\0','\0'};
+   status = addtag(file, evil, sizeof(evil));
+   if (status) {
+   	perror("[11a] unable to add tag");
+   }
+   else {
+      puts("[11a] apparently successful");
+      print_tags(file);
+   }
+   puts("[11b] trying to remove evil tag to file");
+   status = rmtag(file,evil,sizeof(evil));
+   if (status) perror("[11b] Could not remove evil tag");
+   else puts("[11b] apparently successful");
 }
 
