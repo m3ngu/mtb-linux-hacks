@@ -168,7 +168,7 @@ int main (int argc, char *argv[]) {
       puts("[8] gettags should truncate tag to size_t (=12)");
    	 print_tags(file);
    }
-   if (rmtag(file,tag,3)) perror("[8] Failure cleaning up");
+   if (rmtag(file,tag,curlen)) perror("[8] Failure cleaning up");
 
    // NEGATIVE size_t
    puts("--------------------------------------------------------------------------");
