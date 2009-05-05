@@ -48,8 +48,20 @@ Modified files:
         added __NR_rmtag/addtag/gettags macros and updated __NR_syscalls
     include/linux/syscalls.h
         added declarations for sys_addtag, sys_rmtag, and sys_gettags
-    include/...
-	fs/...
+    include/linux/fs.h
+	added the 3 functions (add,rm,get) to inode_operations
+    fs/ext2/namei.c
+        added 3 pointers (add,rm,get) to 2 struct inode_operations
+    fs/ext2/file.c	
+        added 3 pointers (add,rm,get) to 1 struct inode_operations
+    fs/ext2/inode.c
+	added ext2 specific functions (add,rm,get) and ext2_tags_clear
+    fs/ext2/ialloc.c
+	updated functions ext2_free_inode and ext2_new_inode
+    fs/ext2/ext2.h
+	added pointer in ext2_inode_info and ext2_{add,rm,get} declarations
+    fs/inode.c
+	added the 3 system calls sys_{add,rm,get}
 
 New Files:
 	None.        
