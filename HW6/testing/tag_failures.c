@@ -102,7 +102,7 @@ int main (int argc, char *argv[]) {
    }
    // cleanup...
    for ( --i ; i >= 0; i--) {
-   	  tag[0] = i;
+   	  tag[0] = i + 48;
    	  status = rmtag(file,tag,400);
    	  if (status) perror("[3b] Unexpected error cleaning up");
    }
