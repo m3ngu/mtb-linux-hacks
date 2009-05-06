@@ -90,7 +90,7 @@ int main (int argc, char *argv[]) {
    tag[400] = '\0';
    int i;
    for (i = 0; i < 12; i++) {
-   	  tag[0] = i;
+   	  tag[0] = i + 48;
       status = addtag(file,tag,400);
       if (status) {
       	 fprintf(stderr, 
